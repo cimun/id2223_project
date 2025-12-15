@@ -122,7 +122,7 @@ if not loaded:
 
 st.subheader("Time Window")
 
-now = datetime.utcnow()
+now = datetime.now()
 default_start = now
 default_end = now + timedelta(days=7)
 
