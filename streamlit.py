@@ -46,10 +46,12 @@ st.markdown(
 @st.cache_resource(show_spinner="Connecting to Hopsworks...")
 def connect_hopsworks():
     import hopsworks
+    print("Logging in...")
     project = hopsworks.login(
         project=HOPSWORKS_PROJECT,
         api_key_value=HOPSWORKS_API_KEY
     )
+    print("Getting feature store...")
     fs = project.get_feature_store()
     return fs
 
