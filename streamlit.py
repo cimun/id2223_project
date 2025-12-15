@@ -70,7 +70,7 @@ except Exception as e:
 @st.cache_data(show_spinner="Loading feature group...")
 def load_feature_group(fg_name: str, version: int):
     fg = fs.get_feature_group(fg_name, version=version)
-    df = fg.read(read_options={"use_hive": True})
+    df = fg.read()
     df[TIME_COL] = pd.to_datetime(df[TIME_COL])
     return df
 
