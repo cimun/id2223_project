@@ -8,7 +8,7 @@ import os
 # =====================================================================
 
 HOPSWORKS_PROJECT = "cimun"
-HOPSWORKS_API_KEY = os.getenv("HOPSWORKS_API_KEY")
+HOPSWORKS_API_KEY = "uyF3wIn3OVAm1Sne.y9dXwMhnPr9JHLdVpfkfwCEBy8JJjq7c4j9IOsbLcKwBfnDtnxWvb5PNwa5E3cxT"
 
 # List of prediction feature groups to visualize
 PREDICTION_FEATURE_GROUPS = [
