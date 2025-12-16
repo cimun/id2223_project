@@ -13,7 +13,10 @@ HOPSWORKS_API_KEY = "uyF3wIn3OVAm1Sne.y9dXwMhnPr9JHLdVpfkfwCEBy8JJjq7c4j9IOsbLcK
 
 # List of prediction feature groups to visualize
 PREDICTION_FEATURE_GROUPS = [
-    "aq_predictions_drosserweg"
+    "aq_predictions_drosserweg",
+    "aq_predictions_johannes_filzer_strasse",
+    "aq_predictions_marie_andessner_platz",
+    "aq_predictions_hallwang"
 ]
 
 FEATURE_GROUP_VERSION = 1
