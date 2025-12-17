@@ -34,12 +34,10 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("🔋 Energy Forecast Dashboard")
+st.title("Energy Forecast Dashboard")
 
 st.markdown(
     """
-    Forecasts loaded directly from **Hopsworks**, using hard-coded project and API key.  
-    Select any prediction feature group from the list and browse forward 7 days or more.
     """
 )
 
@@ -86,10 +84,10 @@ def load_feature_group(fg_name: str, version: int):
 # 4. UI – SELECT PREDICTION SETS
 # =====================================================================
 
-st.subheader("Select Predictions")
+#st.subheader("Select Predictions")
 
 selected_fgs = st.multiselect(
-    "Feature groups",
+    "Sensors",
     PREDICTION_FEATURE_GROUPS,
     default=[PREDICTION_FEATURE_GROUPS[0]],
     help="Overlay multiple prediction datasets on the same plot."
@@ -129,7 +127,7 @@ if not loaded:
 # 6. TIME SLIDER (WITH SAFETY BOUNDS)
 # =====================================================================
 
-st.subheader("Time Window")
+#st.subheader("Time Window")
 
 # 1. Define the absolute bounds from your data
 slider_min = global_min
