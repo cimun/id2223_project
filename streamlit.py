@@ -107,8 +107,9 @@ for fg_name in selected_fgs:
         df = load_feature_group(fg_name, FEATURE_GROUP_VERSION)
         loaded[fg_name] = df
 
-        fg_min = df[TIME_COL].min()
-        fg_max = df[TIME_COL].max()
+        fg_min = df[TIME_COL].min().to_pydatetime()
+        fg_max = df[TIME_COL].max().to_pydatetime()
+    
         global_min = fg_min if global_min is None else min(global_min, fg_min)
         global_max = fg_max if global_max is None else max(global_max, fg_max)
 
