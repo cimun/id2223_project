@@ -56,14 +56,14 @@ def connect_hopsworks():
     print("Getting feature store...")
     fs = project.get_feature_store()
     return fs
-"""
+
 try:
     fs = connect_hopsworks()
-    st.success(f"Connected to Hopsworks project: **{HOPSWORKS_PROJECT}**")
+#    st.success(f"Connected to Hopsworks project: **{HOPSWORKS_PROJECT}**")
 except Exception as e:
     st.error(f"❌ Failed to connect to Hopsworks: {e}")
     st.stop()
-"""
+
 
 # Create two columns with a 3:1 ratio
 col1, col2 = st.columns([3, 1])
