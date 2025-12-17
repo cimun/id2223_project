@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import os
 import hopsworks
 
@@ -125,7 +125,7 @@ if not loaded:
 
 st.subheader("Time Window")
 
-now = datetime.now()
+now = datetime.now(timezone.utc)
 default_start = now
 default_end = now + timedelta(days=7)
 
