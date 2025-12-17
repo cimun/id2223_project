@@ -56,14 +56,36 @@ def connect_hopsworks():
     print("Getting feature store...")
     fs = project.get_feature_store()
     return fs
-
+"""
 try:
     fs = connect_hopsworks()
     st.success(f"Connected to Hopsworks project: **{HOPSWORKS_PROJECT}**")
 except Exception as e:
     st.error(f"❌ Failed to connect to Hopsworks: {e}")
     st.stop()
+"""
 
+# Create two columns with a 3:1 ratio
+col1, col2 = st.columns([3, 1])
+
+with col1:
+    # Move your multiselect here
+    selected_fgs = st.multiselect(
+        "Feature groups",
+        PREDICTION_FEATURE_GROUPS,
+        default=[PREDICTION_FEATURE_GROUPS[0]],
+        help="Overlay multiple prediction datasets on the same plot."
+    )
+
+with col2:
+    # Add some padding to align it vertically with the multiselect if needed
+    st.markdown("<br>", unsafe_allow_html=True) 
+    
+    # Display the connection status here
+    if 'fs' in locals():
+        st.success(f"✅ **{HOPSWORKS_PROJECT}**")
+    else:
+        st.error("❌ Disconnected")
 # =====================================================================
 # 3. READ FEATURE GROUPS
 # =====================================================================
@@ -85,7 +107,7 @@ def load_feature_group(fg_name: str, version: int):
 # =====================================================================
 
 #st.subheader("Select Predictions")
-
+"""
 selected_fgs = st.multiselect(
     "Sensors",
     PREDICTION_FEATURE_GROUPS,
@@ -96,7 +118,7 @@ selected_fgs = st.multiselect(
 if not selected_fgs:
     st.warning("Please select at least one feature group.")
     st.stop()
-
+"""
 # =====================================================================
 # 5. LOAD ALL SELECTED FEATURE GROUPS
 # =====================================================================
