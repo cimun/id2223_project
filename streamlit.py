@@ -66,7 +66,7 @@ except Exception as e:
 
 
 # Create two columns with a 3:1 ratio
-col1, col2 = st.columns([3, 1])
+col1, col2 = st.columns([3, 2])
 
 with col1:
     # Move your multiselect here
@@ -107,18 +107,18 @@ def load_feature_group(fg_name: str, version: int):
 # =====================================================================
 
 #st.subheader("Select Predictions")
-"""
-selected_fgs = st.multiselect(
-    "Sensors",
-    PREDICTION_FEATURE_GROUPS,
-    default=[PREDICTION_FEATURE_GROUPS[0]],
-    help="Overlay multiple prediction datasets on the same plot."
-)
 
-if not selected_fgs:
-    st.warning("Please select at least one feature group.")
-    st.stop()
-"""
+#selected_fgs = st.multiselect(
+#    "Sensors",
+#    PREDICTION_FEATURE_GROUPS,
+#    default=[PREDICTION_FEATURE_GROUPS[0]],
+#    help="Overlay multiple prediction datasets on the same plot."
+#)#
+#
+#if not selected_fgs:
+#    st.warning("Please select at least one feature group.")
+#    st.stop()
+
 # =====================================================================
 # 5. LOAD ALL SELECTED FEATURE GROUPS
 # =====================================================================
