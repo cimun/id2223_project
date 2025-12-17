@@ -234,29 +234,82 @@ else:
     # Create Plotly figure
     fig = go.Figure()
     
-    # Add real data traces (solid lines)
-    if combined_real is not None:
-        for col in combined_real.columns:
+    # For each sensor, create a combined trace with real and forecast data
+    for col in combined_pred.columns:
+        sensor_name = col
+        
+        # Get prediction data
+        pred_data = combined_pred[col]
+        
+        # Get corresponding real data if available
+        real_col = col + "_real"
+        real_data = combined_real[real_col] if combined_real is not None and real_col in combined_real.columns else pd.Series()
+        
+        if not real_data.empty:
+            # Merge real and prediction data, preferring real where available
+            merged = pd.DataFrame({
+                'real': real_data,
+                'pred': pred_data
+            })
+            
+            # Create combined series: use real data where available, forecast elsewhere
+            merged['combined'] = merged['real'].fillna(merged['pred'])
+            combined_data = merged['combined']
+            
+            # Find the transition point from real to forecast
+            last_real_idx = merged['real'].last_valid_index()
+            
+            if last_real_idx is not None:
+                # Split into real (solid) and forecast (dashed) parts
+                real_mask = merged.index <= last_real_idx
+                forecast_mask = merged.index >= last_real_idx
+                
+                # Add real data segment (solid line)
+                real_segment = combined_data[real_mask]
+                if not real_segment.empty:
+                    fig.add_trace(go.Scatter(
+                        x=real_segment.index,
+                        y=real_segment.values,
+                        mode='lines',
+                        name=sensor_name,
+                        line=dict(dash='solid', width=2),
+                        legendgroup=sensor_name,
+                        showlegend=True
+                    ))
+                
+                # Add forecast data segment (dashed line)
+                forecast_segment = combined_data[forecast_mask]
+                if not forecast_segment.empty:
+                    fig.add_trace(go.Scatter(
+                        x=forecast_segment.index,
+                        y=forecast_segment.values,
+                        mode='lines',
+                        name=sensor_name + " (Forecast)",
+                        line=dict(dash='dash', width=2),
+                        legendgroup=sensor_name,
+                        showlegend=False
+                    ))
+            else:
+                # No real data, just show forecast
+                fig.add_trace(go.Scatter(
+                    x=combined_data.index,
+                    y=combined_data.values,
+                    mode='lines',
+                    name=sensor_name,
+                    line=dict(dash='dash', width=2)
+                ))
+        else:
+            # No real data, just show prediction
             fig.add_trace(go.Scatter(
-                x=combined_real.index,
-                y=combined_real[col],
+                x=pred_data.index,
+                y=pred_data.values,
                 mode='lines',
-                name=col.replace("_real", " (Real)"),
-                line=dict(dash='solid', width=2)
+                name=sensor_name,
+                line=dict(dash='dash', width=2)
             ))
     
-    # Add prediction traces (dashed lines)
-    for col in combined_pred.columns:
-        fig.add_trace(go.Scatter(
-            x=combined_pred.index,
-            y=combined_pred[col],
-            mode='lines',
-            name=col + " (Forecast)",
-            line=dict(dash='dash', width=2)
-        ))
-    
     fig.update_layout(
-        title="PM2.5 Predictions vs Real Data",
+        title="PM2.5 Real Data vs Forecast",
         xaxis_title="Time",
         yaxis_title="PM2.5 (µg/m³)",
         hovermode='x unified',
