@@ -232,12 +232,17 @@ if combined_pred is None or combined_pred.empty:
 else:
     combined_pred = combined_pred.sort_index()
     
-    # Create Plotly figure
+    # Create Plotly figure with color palette
     fig = go.Figure()
+    colors = [
+        '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728',  # Standard colors
+        '#9467bd', '#8c564b', '#e377c2', '#7f7f7f'
+    ]
     
     # For each sensor, create a combined trace with real and forecast data
-    for col in combined_pred.columns:
+    for idx, col in enumerate(combined_pred.columns):
         sensor_name = col
+        color = colors[idx % len(colors)]  # Cycle through colors
         
         # Get prediction data
         pred_data = combined_pred[col]
@@ -273,7 +278,7 @@ else:
                         y=real_segment.values,
                         mode='lines',
                         name=sensor_name,
-                        line=dict(dash='solid', width=2),
+                        line=dict(color=color, dash='solid', width=2),
                         legendgroup=sensor_name,
                         showlegend=True
                     ))
@@ -286,7 +291,7 @@ else:
                         y=forecast_segment.values,
                         mode='lines',
                         name=sensor_name + " (Forecast)",
-                        line=dict(dash='dash', width=2),
+                        line=dict(color=color, dash='dash', width=2),
                         legendgroup=sensor_name,
                         showlegend=False
                     ))
@@ -297,7 +302,7 @@ else:
                     y=combined_data.values,
                     mode='lines',
                     name=sensor_name,
-                    line=dict(dash='dash', width=2)
+                    line=dict(color=color, dash='dash', width=2)
                 ))
         else:
             # No real data, just show prediction
@@ -306,7 +311,7 @@ else:
                 y=pred_data.values,
                 mode='lines',
                 name=sensor_name,
-                line=dict(dash='dash', width=2)
+                line=dict(color=color, dash='dash', width=2)
             ))
     
     fig.update_layout(
