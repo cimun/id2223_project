@@ -75,6 +75,10 @@ def load_feature_group(fg_name: str, version: int):
     fg = fs.get_feature_group(fg_name, version=version)
     df = fg.read()
     df[TIME_COL] = pd.to_datetime(df[TIME_COL])
+
+    df = df.sort_values(by=[TIME_COL]) # Ensure order
+    df = df.drop_duplicates(subset=[TIME_COL], keep='last')
+
     return df
 
 
@@ -120,13 +124,6 @@ if not loaded:
     st.error("No valid feature groups could be loaded.")
     st.stop()
 
-# =====================================================================
-# 6. TIME SLIDER (DEFAULT = NOW → NOW + 7 DAYS)
-# =====================================================================
-
-# =====================================================================
-# 6. TIME SLIDER (WITH STATE PERSISTENCE)
-# =====================================================================
 
 # =====================================================================
 # 6. TIME SLIDER (WITH SAFETY BOUNDS)
