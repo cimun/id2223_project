@@ -124,21 +124,30 @@ if not loaded:
 # 6. TIME SLIDER (DEFAULT = NOW → NOW + 7 DAYS)
 # =====================================================================
 
+# =====================================================================
+# 6. TIME SLIDER (WITH STATE PERSISTENCE)
+# =====================================================================
+
 st.subheader("Time Window")
 
-now = datetime.now(timezone.utc)
-default_start = now
-default_end = now + timedelta(days=7)
+# 1. Define the absolute bounds for the slider
+slider_min = global_min
+slider_max = global_max
 
-# clamp within available data range
-default_start = max(default_start, global_min)
-default_end = min(default_end, global_max)
+# 2. Initialize the selection in session_state if it doesn't exist
+if "current_range" not in st.session_state:
+    now = datetime.now(timezone.utc)
+    # Default selection: Now to Now + 7 days
+    init_start = max(now, slider_min)
+    init_end = min(now + timedelta(days=7), slider_max)
+    st.session_state.current_range = (init_start, init_end)
 
+# 3. Create the slider and link it to session_state
 time_range = st.slider(
     "Select time window",
-    min_value=global_min,
-    max_value=global_max,
-    value=(default_start, default_end),
+    min_value=slider_min,
+    max_value=slider_max,
+    key="current_range", # This key links the widget to session_state automatically
     format="YYYY-MM-DD HH:mm"
 )
 
