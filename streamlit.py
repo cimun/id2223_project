@@ -128,26 +128,44 @@ if not loaded:
 # 6. TIME SLIDER (WITH STATE PERSISTENCE)
 # =====================================================================
 
+# =====================================================================
+# 6. TIME SLIDER (WITH SAFETY BOUNDS)
+# =====================================================================
+
 st.subheader("Time Window")
 
-# 1. Define the absolute bounds for the slider
+# 1. Define the absolute bounds from your data
 slider_min = global_min
 slider_max = global_max
 
 # 2. Initialize the selection in session_state if it doesn't exist
 if "current_range" not in st.session_state:
     now = datetime.now(timezone.utc)
-    # Default selection: Now to Now + 7 days
-    init_start = max(now, slider_min)
-    init_end = min(now + timedelta(days=7), slider_max)
+    
+    # SAFETY CHECK: 
+    # If 'now' is already past the end of our data, 
+    # start the slider at the end of the data minus 7 days.
+    if now > slider_max:
+        init_end = slider_max
+        init_start = max(slider_min, slider_max - timedelta(days=7))
+    else:
+        init_start = max(now, slider_min)
+        init_end = min(now + timedelta(days=7), slider_max)
+        
     st.session_state.current_range = (init_start, init_end)
 
-# 3. Create the slider and link it to session_state
+# 3. Double-check session_state isn't out of bounds (prevents crashes if data changes)
+current_val = list(st.session_state.current_range)
+current_val[0] = max(slider_min, min(current_val[0], slider_max))
+current_val[1] = max(slider_min, min(current_val[1], slider_max))
+st.session_state.current_range = tuple(current_val)
+
+# 4. Create the slider
 time_range = st.slider(
     "Select time window",
     min_value=slider_min,
     max_value=slider_max,
-    key="current_range", # This key links the widget to session_state automatically
+    key="current_range",
     format="YYYY-MM-DD HH:mm"
 )
 
