@@ -1,3 +1,4 @@
 streamlit
 pandas==2.1.4
 hopsworks==4.2.2
+plotly
