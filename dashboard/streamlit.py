@@ -14,8 +14,8 @@ HOPSWORKS_API_KEY = "uyF3wIn3OVAm1Sne.y9dXwMhnPr9JHLdVpfkfwCEBy8JJjq7c4j9IOsbLcK
 
 # List of prediction feature groups to visualize
 PREDICTION_FEATURE_GROUPS = [
-    "solar_energy_predictions_se_4"
-    "wind_energy_predictions_se_4",
+    "solar_energy_predictions_se_4",
+    "wind_energy_predictions_se_4"
 ]
 
 # List of real data feature groups (corresponding to predictions)
