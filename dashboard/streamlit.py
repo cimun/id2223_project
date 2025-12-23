@@ -308,9 +308,9 @@ else:
             ))
     
     fig.update_layout(
-        title="PM2.5 Real Data vs Forecast",
+        title="Forecasted energy production",
         xaxis_title="Time",
-        yaxis_title="PM2.5 (µg/m³)",
+        yaxis_title="Forecasted energy production (Unit)",
         hovermode='x unified',
         height=500,
         template="plotly_white"
