@@ -152,8 +152,8 @@ if not loaded_predictions:
 #st.subheader("Time Window")
 
 # 1. Define the absolute bounds from your data
-slider_min = datetime(2023, 1, 1, tzinfo=timezone.utc)
-#slider_min = global_min
+#slider_min = datetime(2023, 1, 1, tzinfo=timezone.utc)
+slider_min = global_min
 slider_max = global_max
 
 # 2. Initialize the selection in session_state if it doesn't exist
