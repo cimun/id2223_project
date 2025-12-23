@@ -9,30 +9,23 @@ import plotly.graph_objects as go
 # 0. HARD-CODED CONFIG  (EDIT THESE ONLY)
 # =====================================================================
 
-HOPSWORKS_PROJECT = "cimun"
+HOPSWORKS_PROJECT = "chris"
 HOPSWORKS_API_KEY = "uyF3wIn3OVAm1Sne.y9dXwMhnPr9JHLdVpfkfwCEBy8JJjq7c4j9IOsbLcKwBfnDtnxWvb5PNwa5E3cxT"
 
 # List of prediction feature groups to visualize
 PREDICTION_FEATURE_GROUPS = [
-    "aq_predictions_drosserweg",
-    "aq_predictions_johannes_filzer_strasse",
-    "aq_predictions_marie_andessner_platz",
-    "aq_predictions_hallwang"
+    "solar_energy_predictions_se_4"
+    "wind_energy_predictions_se_4",
 ]
 
 # List of real data feature groups (corresponding to predictions)
-REAL_DATA_FEATURE_GROUPS = [
-    "air_quality_drosserweg",
-    "air_quality_johannes_filzer_strasse",
-    "air_quality_marie_andessner_platz",
-    "air_quality_hallwang"
-]
+REAL_DATA_FEATURE_GROUPS = []
 
 FEATURE_GROUP_VERSION = 1
 
 # Mandatory column names inside each prediction FG
-TIME_COL = "date"
-PREDICTED_VALUE_COL = "predicted_pm25"
+TIME_COL = "timestamp"
+PREDICTED_VALUE_COL = "predicted_energy"
 REAL_VALUE_COL = "pm25"  # Real data column name
 
 # =====================================================================
