@@ -1,16 +1,14 @@
 #!/usr/bin/env python3
 import sys
+import traceback
 import warnings
 from pathlib import Path
 from datetime import datetime
+
 warnings.filterwarnings("ignore", module="IPython")
 
 # ---------- Paths / PYTHONPATH ----------
 root_dir = Path().absolute()
-if root_dir.parts[-1:] == ("airquality",):
-    root_dir = Path(*root_dir.parts[:-1])
-if root_dir.parts[-1:] == ("notebooks",):
-    root_dir = Path(*root_dir.parts[:-1])
 root_dir = root_dir.resolve()
 if str(root_dir) not in sys.path:
     sys.path.append(str(root_dir))
@@ -22,6 +20,7 @@ if root_dir not in sys.path:
 
 # ---------- Settings ----------
 from utils import config
+from utils.util import transform_timestamp
 settings = config.HopsworksSettings(_env_file=str(root_dir / ".env"))
 
 # ---------- Imports ----------
@@ -45,6 +44,8 @@ def process_sensor(location: list, time: datetime) -> None:
     hourly_weather_df = util.get_hourly_weather_forecast(latitude, longitude, time) # needs to have 24 entries for next 24 hours
     hourly_weather_df["section"] = section
 
+    hourly_weather_df = transform_timestamp(hourly_weather_df)
+
     hourly_energy_df = util.get_hourly_energy_production(section, time, settings.ENTSOE_API_KEY) # needs to have 1 entry for past hour
 
     # Per-sensor feature groups
@@ -66,6 +67,7 @@ def main():
             process_sensor(location, now)
         except Exception as e:
             print(f"! Error processing {location[0]}: {e}")
+            traceback.print_exception(e)
 
     print("\nAll sections processed.")
 

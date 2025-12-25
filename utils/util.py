@@ -121,37 +121,30 @@ def plot_energy_forecast(section: str, energy_source: str, df: pd.DataFrame, fil
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
 
     # Set the y-axis to a logarithmic scale
-    ax.set_yscale('log')
-    ax.set_yticks([0, 10, 25, 50, 100, 250, 500])
-    ax.get_yaxis().set_major_formatter(plt.ScalarFormatter())
-    ax.set_ylim(bottom=1)
+    if energy_source == 'solar':
+        ax.get_yaxis().set_major_formatter(plt.ScalarFormatter())
+        ax.set_ylim(bottom=0)
+    else:
+        ax.set_yscale('log')
+        ax.set_yticks([0, 50, 100, 250, 500, 1000, 2000, 5000])
+        ax.get_yaxis().set_major_formatter(plt.ScalarFormatter())
+        ax.set_ylim(bottom=1)
 
     # Set the labels and title
     ax.set_xlabel('Timestamp')
     ax.set_title(f"{energy_source} predicted (Logarithmic Scale) for {section}")
     ax.set_ylabel(f'{energy_source} Energy Production (MWh)')
 
-    colors = ['green', 'yellow', 'orange', 'red', 'purple', 'darkred']
-    labels = ['Good', 'Moderate', 'Unhealthy for Some', 'Unhealthy', 'Very Unhealthy', 'Hazardous']
-    ranges = [(0, 49), (50, 99), (100, 149), (150, 199), (200, 299), (300, 500)]
-    for color, (start, end) in zip(colors, ranges):
-        ax.axhspan(start, end, color=color, alpha=0.3)
-
-    # Add a legend for the different Air Quality Categories
-    patches = [Patch(color=colors[i], label=f"{labels[i]}: {ranges[i][0]}-{ranges[i][1]}") for i in range(len(colors))]
-    legend1 = ax.legend(handles=patches, loc='upper right', title="Air Quality Categories", fontsize='x-small')
-
     # Aim for ~10 annotated values on x-axis, will work for both forecasts ans hindcasts
-    if len(df.index) > 11:
-        every_x_tick = len(df.index) / 10
-        ax.xaxis.set_major_locator(MultipleLocator(every_x_tick))
+    # if len(df.index) > 25:
+    #     every_x_tick = len(df.index) / 800
+    #     ax.xaxis.set_major_locator(MultipleLocator(every_x_tick))
 
     plt.xticks(rotation=45)
 
-    if hindcast == True:
+    if hindcast:
         ax.plot(day, df[energy_source], label=f'Actual {energy_source}', color='black', linewidth=2, marker='^', markersize=5, markerfacecolor='grey')
         legend2 = ax.legend(loc='upper left', fontsize='x-small')
-        ax.add_artist(legend1)
 
     # Ensure everything is laid out neatly
     plt.tight_layout()
@@ -164,12 +157,25 @@ def plot_energy_forecast(section: str, energy_source: str, df: pd.DataFrame, fil
 def backfill_predictions_for_monitoring(weather_fg, energy_fg, monitor_fg, model, energy_source):
     features_df = weather_fg.read()
     features_df = features_df.sort_values(by=['timestamp'], ascending=True)
+    features_df = transform_timestamp(features_df)
     features_df = features_df.tail(30)
-    features_df['predicted_energy'] = model.predict(features_df[WEATHER_FEATURES])
+    features_df['predicted_energy'] = model.predict(features_df[WEATHER_FEATURES+["hour", "day_of_week", "month", "day_of_year"]])
     df = pd.merge(features_df, energy_fg[['timestamp', energy_source]], on="timestamp")
-    df['days_before_forecast_day'] = 1
+    df['hours_before_forecast'] = 1
     hindcast_df = df
-    print(df.head())
+    print("Backfilled hindcast predictions:")
+    print(df.head(15))
     df = df.drop(energy_source, axis=1)
     monitor_fg.insert(df, write_options={"wait_for_job": True})
     return hindcast_df
+
+def transform_timestamp(df_in: pd.DataFrame) -> pd.DataFrame:
+    df = df_in.copy()
+    df_in['timestamp'] = pd.to_datetime(df_in['timestamp'])
+    # Extract relevant features for energy prediction
+    df['hour'] = df_in['timestamp'].dt.hour
+    df['day_of_week'] = df_in['timestamp'].dt.dayofweek
+    df['month'] = df_in['timestamp'].dt.month
+    df['day_of_year'] = df_in['timestamp'].dt.dayofyear
+
+    return df

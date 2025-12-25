@@ -22,7 +22,7 @@ install-recommender: check-venv
 	pip install -r requirements-llm.txt
 
 gef-clean:
-	python mlfs/clean_hopsworks_resources.py aq
+	python utils/clean_hopsworks_resources.py gef
 
 gef-features:
 	python scripts/1_feat_back_param.py

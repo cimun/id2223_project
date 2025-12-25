@@ -1,5 +1,7 @@
+#!/usr/bin/env python3
 import sys
 import os
+import traceback
 import warnings
 from pathlib import Path
 from datetime import datetime
@@ -8,10 +10,6 @@ warnings.filterwarnings("ignore", module="IPython")
 
 # ---------- Paths / PYTHONPATH ----------
 root_dir = Path().absolute()
-if root_dir.parts[-1:] == ("airquality",):
-    root_dir = Path(*root_dir.parts[:-1])
-if root_dir.parts[-1:] == ("notebooks",):
-    root_dir = Path(*root_dir.parts[:-1])
 root_dir = root_dir.resolve()
 if str(root_dir) not in sys.path:
     sys.path.append(str(root_dir))
@@ -60,21 +58,21 @@ def train_energy_prediction_model(location: dict, energy_source: str) -> None:
     # Convert string to datetime object
     test_start = datetime.strptime(start_date_test_data, "%Y-%m-%d")
     
-    X_train, X_test, y_train, y_test = fv.train_test_split(test_start=test_start)
-    X_features = X_train.drop(columns=["timestamp"])
-    X_test_features = X_test.drop(columns=["timestamp"])
+    x_train, x_test, y_train, y_test = fv.train_test_split(test_start=test_start)
+    x_features = x_train.drop(columns=["timestamp"])
+    x_test_features = x_test.drop(columns=["timestamp"])
 
     model = XGBRegressor()
-    model.fit(X_features, y_train)
+    model.fit(x_features, y_train)
 
-    y_pred = model.predict(X_test_features)
+    y_pred = model.predict(x_test_features)
     mse = mean_squared_error(y_test.iloc[:, 0], y_pred)
     r2 = r2_score(y_test.iloc[:, 0], y_pred)
     print(f"[{section}, {energy_source}] MSE={mse:.4f} R2={r2:.4f}")
 
     df = y_test.copy()
     df["predicted_energy"] = y_pred
-    df["timestamp"] = X_test["timestamp"]
+    df["timestamp"] = x_test["timestamp"]
     df = df.sort_values(by=["timestamp"])
 
     out_dir = Path(f"{energy_source}_model_{section.lower()}")
@@ -84,11 +82,9 @@ def train_energy_prediction_model(location: dict, energy_source: str) -> None:
 
     hindcast_path = img_dir / f"{energy_source}_hindcast.png"
     plt = util.plot_energy_forecast(section, energy_source, df, str(hindcast_path), hindcast=True)
-    #plt.show()
 
     plot_importance(model)
     plt.savefig(img_dir / "feature_importance.png")
-    #plt.show()
 
     model.save_model(str(out_dir / "model.json"))
     metrics = {"MSE": str(mse), "R squared": str(r2)}
@@ -112,6 +108,7 @@ def main():
             train_energy_prediction_model(location, "solar")
         except Exception as e:
             print(f"! Error processing {location[0]}: {e}")
+            traceback.print_exception(e)
 
     print("\nAll sections processed.")
 

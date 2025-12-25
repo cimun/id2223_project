@@ -26,6 +26,7 @@ import hopsworks
 import great_expectations as ge
 from utils import util
 from data.Constants import LOCATIONS, EARLIEST_HISTORICAL_DATE
+from utils.util import transform_timestamp
 
 # ---------- Hopsworks login ----------
 project = hopsworks.login(engine="python")
@@ -70,6 +71,8 @@ def process_sensor(location: list, today: date) -> None:
     weather_df = util.get_historical_weather(EARLIEST_HISTORICAL_DATE, today, latitude, longitude)
     weather_df["section"] = section
 
+    weather_df = transform_timestamp(weather_df)
+
     # GE expectation suites
     # TODO: check if they are still defined correctly
     energy_suite = ge_suite_energy_production()
@@ -90,6 +93,10 @@ def process_sensor(location: list, today: date) -> None:
     )
 
     energy_production_fg.insert(energy_df)
+    energy_production_fg.update_feature_description("timestamp", "Timestamp of weather measurement")
+    energy_production_fg.update_feature_description("section", "Section in which energy is produced")
+    energy_production_fg.update_feature_description("wind", "Wind energy production (MW)")
+    energy_production_fg.update_feature_description("solar", "Solar energy production (MW)")
 
     weather_fg = fs.get_or_create_feature_group(
         name=weather_fg_name,
@@ -102,6 +109,18 @@ def process_sensor(location: list, today: date) -> None:
     weather_fg.insert(weather_df, wait=True)
     weather_fg.update_feature_description("timestamp", "Timestamp of weather measurement")
     weather_fg.update_feature_description("section", "Section for weather")
+    weather_fg.update_feature_description("temperature_2m", "Outside temperature (Celsius)")
+    weather_fg.update_feature_description("precipitation", "Total precipitation (mm)")
+    weather_fg.update_feature_description("wind_speed_10m", "Wind speed at 10m (m/s)")
+    weather_fg.update_feature_description("wind_direction_10m", "Wind direction at 10m (degrees)")
+    weather_fg.update_feature_description("surface_pressure", "Surface pressure (hPa)")
+    weather_fg.update_feature_description("relative_humidity_2m", "Relative humidity at 2m (%)")
+    weather_fg.update_feature_description("sunshine_duration", "Sunshine duration (seconds)")
+    weather_fg.update_feature_description("cloud_cover", "Cloud cover (%)")
+    weather_fg.update_feature_description("hour", "Hour of the day")
+    weather_fg.update_feature_description("month", "Month of the year")
+    weather_fg.update_feature_description("day_of_week", "Day of the week")
+    weather_fg.update_feature_description("day_of_year", "Day of the year")
 
     print(f"✓ Completed: {section}")
 

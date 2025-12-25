@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import sys
-import os
 import traceback
 import warnings
 from pathlib import Path
@@ -10,10 +9,6 @@ warnings.filterwarnings("ignore", module="IPython")
 
 # ---------- Paths / PYTHONPATH ----------
 root_dir = Path().absolute()
-if root_dir.parts[-1:] == ("airquality",):
-    root_dir = Path(*root_dir.parts[:-1])
-if root_dir.parts[-1:] == ("notebooks",):
-    root_dir = Path(*root_dir.parts[:-1])
 root_dir = root_dir.resolve()
 if str(root_dir) not in sys.path:
     sys.path.append(str(root_dir))
@@ -35,13 +30,9 @@ from utils import util
 from data.Constants import LOCATIONS, WEATHER_FEATURES
 
 # ---------- Hopsworks login ----------
-if settings.HOPSWORKS_API_KEY is not None:
-    os.environ["HOPSWORKS_API_KEY"] = settings.HOPSWORKS_API_KEY.get_secret_value()
-
 project = hopsworks.login(engine="python")
 fs = project.get_feature_store()
 mr = project.get_model_registry()
-secrets = hopsworks.get_secrets_api()
 
 def run_inference_for_sensor(location: dict, energy_source: str, current_time: datetime) -> None:
     """Run batch inference for one sensor, store results and upload PNGs."""
@@ -65,10 +56,11 @@ def run_inference_for_sensor(location: dict, energy_source: str, current_time: d
     batch_df = weather_fg.filter(weather_fg.timestamp >= current_time).read()
     batch_df = batch_df.sort_values("timestamp")
 
-    batch_df["predicted_energy"] = xgb_model.predict(batch_df[WEATHER_FEATURES])
+
+    batch_df["predicted_energy"] = xgb_model.predict(batch_df[WEATHER_FEATURES+["hour", "day_of_week", "month", "day_of_year"]])
 
     batch_df["section"] = section
-    batch_df["days_before_forecast_day"] = range(1, len(batch_df) + 1)
+    batch_df["hours_before_forecast"] = range(1, len(batch_df) + 1)
     batch_df = batch_df.sort_values(by=["timestamp"])
 
     # ----- Save prediction chart -----
@@ -83,7 +75,7 @@ def run_inference_for_sensor(location: dict, energy_source: str, current_time: d
         name=f"{energy_source}_energy_predictions_{section.lower()}",
         description=f"Energy ({energy_source}) prediction monitoring for {section}",
         version=1,
-        primary_key=["section", "days_before_forecast_day"],
+        primary_key=["section", "hours_before_forecast"],
         event_time="timestamp",
     )
     monitor_fg.insert(batch_df, wait=True)
@@ -92,7 +84,7 @@ def run_inference_for_sensor(location: dict, energy_source: str, current_time: d
     energy_fg = fs.get_feature_group(name=f"energy_production_{section.lower()}", version=1)
     energy_df = energy_fg.read()
     outcome_df = energy_df[["timestamp", energy_source]]
-    preds_df = monitor_fg.filter(monitor_fg.days_before_forecast_day == 1).read()[
+    preds_df = monitor_fg.filter(monitor_fg.hours_before_forecast == 1).read()[
         ["timestamp", "predicted_energy"]
     ]
 
