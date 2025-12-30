@@ -228,17 +228,19 @@ if combined_pred is None or combined_pred.empty:
 else:
     combined_pred = combined_pred.sort_index()
     
-    # Create Plotly figure with color palette
+    # Create Plotly figure with hardcoded colors for wind and solar
     fig = go.Figure()
-    colors = [
-        '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728',  # Standard colors
-        '#9467bd', '#8c564b', '#e377c2', '#7f7f7f'
-    ]
+    
+    # Hardcoded color mapping: blue for wind, orange for solar
+    color_map = {
+        "wind_energy_predictions_se_4": "#1f77b4",  # Blue
+        "solar_energy_predictions_se_4": "#ff7f0e"  # Orange
+    }
     
     # For each sensor, create hindcast visualization
-    for idx, col in enumerate(combined_pred.columns):
-        sensor_name = col
-        color = colors[idx % len(colors)]  # Cycle through colors
+    for col in combined_pred.columns:
+        # Map feature group name to color
+        color = color_map.get(col, "#7f7f7f")  # Default gray if not found
         
         # Get prediction data
         pred_data = combined_pred[col]
@@ -253,9 +255,9 @@ else:
                 x=real_data.index,
                 y=real_data.values,
                 mode='lines',
-                name=sensor_name + " (Real)",
+                name=col + " (Real)",
                 line=dict(color=color, dash='solid', width=2),
-                legendgroup=sensor_name,
+                legendgroup=col,
                 showlegend=True
             ))
         
@@ -264,9 +266,9 @@ else:
             x=pred_data.index,
             y=pred_data.values,
             mode='lines',
-            name=sensor_name + " (Prediction)",
+            name=col + " (Prediction)",
             line=dict(color=color, dash='dash', width=2),
-            legendgroup=sensor_name,
+            legendgroup=col,
             showlegend=True
         ))
     
