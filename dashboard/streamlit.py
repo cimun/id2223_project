@@ -18,12 +18,12 @@ PREDICTION_FEATURE_GROUPS = [
     "wind_energy_predictions_se_4"
 ]
 
-# List of real data feature groups with their corresponding value columns
-# Format: (feature_group_name, value_column_name)
-REAL_DATA_FEATURE_GROUPS = [
-    ("energy_production_se_4", "solar"),
-    ("energy_production_se_4", "wind")
-]
+# Mapping of prediction feature groups to their corresponding real data
+# Format: prediction_fg_name -> (real_data_fg_name, real_value_column_name)
+PREDICTION_TO_REAL_DATA_MAP = {
+    "solar_energy_predictions_se_4": ("energy_production_se_4", "solar"),
+    "wind_energy_predictions_se_4": ("energy_production_se_4", "wind")
+}
 
 FEATURE_GROUP_VERSION = 1
 
@@ -112,7 +112,7 @@ loaded_predictions = {}
 loaded_real_data = {}
 global_min, global_max = None, None
 
-for i, fg_name in enumerate(selected_fgs):
+for fg_name in selected_fgs:
     # Load predictions
     try:
         df = load_feature_group(fg_name, FEATURE_GROUP_VERSION)
@@ -127,9 +127,9 @@ for i, fg_name in enumerate(selected_fgs):
     except Exception as e:
         st.error(f"Failed to read predictions FG '{fg_name}': {e}")
     
-    # Load corresponding real data
-    if i < len(REAL_DATA_FEATURE_GROUPS):
-        real_data_fg, real_value_col = REAL_DATA_FEATURE_GROUPS[i]
+    # Load corresponding real data based on prediction feature group name
+    if fg_name in PREDICTION_TO_REAL_DATA_MAP:
+        real_data_fg, real_value_col = PREDICTION_TO_REAL_DATA_MAP[fg_name]
         try:
             df_real = load_feature_group(real_data_fg, FEATURE_GROUP_VERSION)
             loaded_real_data[fg_name] = (df_real, real_value_col)
