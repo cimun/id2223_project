@@ -235,7 +235,7 @@ else:
         '#9467bd', '#8c564b', '#e377c2', '#7f7f7f'
     ]
     
-    # For each sensor, create a combined trace with real and forecast data
+    # For each sensor, create hindcast visualization
     for idx, col in enumerate(combined_pred.columns):
         sensor_name = col
         color = colors[idx % len(colors)]  # Cycle through colors
@@ -247,73 +247,33 @@ else:
         real_col = col + "_real"
         real_data = combined_real[real_col] if combined_real is not None and real_col in combined_real.columns else pd.Series()
         
+        # Add real data trace (solid line) - hindcast accuracy check
         if not real_data.empty:
-            # Merge real and prediction data, preferring real where available
-            merged = pd.DataFrame({
-                'real': real_data,
-                'pred': pred_data
-            })
-            
-            # Create combined series: use real data where available, forecast elsewhere
-            merged['combined'] = merged['real'].fillna(merged['pred'])
-            combined_data = merged['combined']
-            
-            # Find the transition point from real to forecast
-            last_real_idx = merged['real'].last_valid_index()
-            
-            if last_real_idx is not None:
-                # Split into real (solid) and forecast (dashed) parts
-                real_mask = merged.index <= last_real_idx
-                forecast_mask = merged.index >= last_real_idx
-                
-                # Add real data segment (solid line)
-                real_segment = combined_data[real_mask]
-                if not real_segment.empty:
-                    fig.add_trace(go.Scatter(
-                        x=real_segment.index,
-                        y=real_segment.values,
-                        mode='lines',
-                        name=sensor_name,
-                        line=dict(color=color, dash='solid', width=2),
-                        legendgroup=sensor_name,
-                        showlegend=True
-                    ))
-                
-                # Add forecast data segment (dashed line)
-                forecast_segment = combined_data[forecast_mask]
-                if not forecast_segment.empty:
-                    fig.add_trace(go.Scatter(
-                        x=forecast_segment.index,
-                        y=forecast_segment.values,
-                        mode='lines',
-                        name=sensor_name + " (Forecast)",
-                        line=dict(color=color, dash='dash', width=2),
-                        legendgroup=sensor_name,
-                        showlegend=False
-                    ))
-            else:
-                # No real data, just show forecast
-                fig.add_trace(go.Scatter(
-                    x=combined_data.index,
-                    y=combined_data.values,
-                    mode='lines',
-                    name=sensor_name,
-                    line=dict(color=color, dash='dash', width=2)
-                ))
-        else:
-            # No real data, just show prediction
             fig.add_trace(go.Scatter(
-                x=pred_data.index,
-                y=pred_data.values,
+                x=real_data.index,
+                y=real_data.values,
                 mode='lines',
-                name=sensor_name,
-                line=dict(color=color, dash='dash', width=2)
+                name=sensor_name + " (Real)",
+                line=dict(color=color, dash='solid', width=2),
+                legendgroup=sensor_name,
+                showlegend=True
             ))
+        
+        # Add prediction data trace (dashed line)
+        fig.add_trace(go.Scatter(
+            x=pred_data.index,
+            y=pred_data.values,
+            mode='lines',
+            name=sensor_name + " (Prediction)",
+            line=dict(color=color, dash='dash', width=2),
+            legendgroup=sensor_name,
+            showlegend=True
+        ))
     
     fig.update_layout(
-        title="Forecasted energy production",
+        title="Energy Production: Real Data vs Predictions (Hindcast)",
         xaxis_title="Time",
-        yaxis_title="Forecasted energy production (Unit)",
+        yaxis_title="Energy production (Unit)",
         hovermode='x unified',
         height=500,
         template="plotly_white"
