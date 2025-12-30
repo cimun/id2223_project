@@ -18,15 +18,18 @@ PREDICTION_FEATURE_GROUPS = [
     "wind_energy_predictions_se_4"
 ]
 
-# List of real data feature groups (corresponding to predictions)
-REAL_DATA_FEATURE_GROUPS = []
+# List of real data feature groups with their corresponding value columns
+# Format: (feature_group_name, value_column_name)
+REAL_DATA_FEATURE_GROUPS = [
+    ("energy_production_se_4", "solar"),
+    ("energy_production_se_4", "wind")
+]
 
 FEATURE_GROUP_VERSION = 1
 
 # Mandatory column names inside each prediction FG
 TIME_COL = "timestamp"
 PREDICTED_VALUE_COL = "predicted_energy"
-REAL_VALUE_COL = "pm25"  # Real data column name
 
 # =====================================================================
 # 1. STREAMLIT PAGE CONFIG
@@ -126,10 +129,10 @@ for i, fg_name in enumerate(selected_fgs):
     
     # Load corresponding real data
     if i < len(REAL_DATA_FEATURE_GROUPS):
-        real_data_fg = REAL_DATA_FEATURE_GROUPS[i]
+        real_data_fg, real_value_col = REAL_DATA_FEATURE_GROUPS[i]
         try:
             df_real = load_feature_group(real_data_fg, FEATURE_GROUP_VERSION)
-            loaded_real_data[fg_name] = df_real
+            loaded_real_data[fg_name] = (df_real, real_value_col)
 
             fg_min = df_real[TIME_COL].min().to_pydatetime()
             fg_max = df_real[TIME_COL].max().to_pydatetime()
@@ -206,10 +209,10 @@ for fg_name, df in loaded_predictions.items():
     combined_pred = tmp if combined_pred is None else combined_pred.join(tmp, how="outer")
 
 # Combine real data
-for fg_name, df in loaded_real_data.items():
+for fg_name, (df, real_value_col) in loaded_real_data.items():
     mask = (df[TIME_COL] >= start_time) & (df[TIME_COL] <= end_time)
-    tmp = df.loc[mask, [TIME_COL, REAL_VALUE_COL]].copy()
-    tmp = tmp.rename(columns={TIME_COL: "time", REAL_VALUE_COL: fg_name + "_real"})
+    tmp = df.loc[mask, [TIME_COL, real_value_col]].copy()
+    tmp = tmp.rename(columns={TIME_COL: "time", real_value_col: fg_name + "_real"})
     tmp = tmp.set_index("time").sort_index()
 
     combined_real = tmp if combined_real is None else combined_real.join(tmp, how="outer")
