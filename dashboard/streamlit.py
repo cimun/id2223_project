@@ -223,11 +223,13 @@ for fg_name, (df, real_value_col) in loaded_real_data.items():
 
 st.subheader("Forecast Visualization")
 
-if combined_pred is None or combined_pred.empty:
+# Check if we have any data to display
+has_pred = combined_pred is not None and not combined_pred.empty
+has_real = combined_real is not None and not combined_real.empty
+
+if not has_pred and not has_real:
     st.warning("No data in the selected window.")
 else:
-    combined_pred = combined_pred.sort_index()
-    
     # Create Plotly figure with hardcoded colors for wind and solar
     fig = go.Figure()
     
@@ -237,17 +239,24 @@ else:
         "solar_energy_predictions_se_4": "#ff7f0e"  # Orange
     }
     
+    # Get all unique feature groups from either predictions or real data
+    all_cols = set()
+    if has_pred:
+        all_cols.update(combined_pred.columns)
+    if has_real:
+        all_cols.update(col.replace("_real", "") for col in combined_real.columns)
+    
     # For each sensor, create hindcast visualization
-    for col in combined_pred.columns:
+    for col in sorted(all_cols):
         # Map feature group name to color
         color = color_map.get(col, "#7f7f7f")  # Default gray if not found
         
         # Get prediction data
-        pred_data = combined_pred[col]
+        pred_data = combined_pred[col] if has_pred and col in combined_pred.columns else pd.Series()
         
         # Get corresponding real data if available
         real_col = col + "_real"
-        real_data = combined_real[real_col] if combined_real is not None and real_col in combined_real.columns else pd.Series()
+        real_data = combined_real[real_col] if has_real and real_col in combined_real.columns else pd.Series()
         
         # Add real data trace (solid line) - hindcast accuracy check
         if not real_data.empty:
@@ -262,15 +271,16 @@ else:
             ))
         
         # Add prediction data trace (dashed line)
-        fig.add_trace(go.Scatter(
-            x=pred_data.index,
-            y=pred_data.values,
-            mode='lines',
-            name=col + " (Prediction)",
-            line=dict(color=color, dash='dash', width=2),
-            legendgroup=col,
-            showlegend=True
-        ))
+        if not pred_data.empty:
+            fig.add_trace(go.Scatter(
+                x=pred_data.index,
+                y=pred_data.values,
+                mode='lines',
+                name=col + " (Prediction)",
+                line=dict(color=color, dash='dash', width=2),
+                legendgroup=col,
+                showlegend=True
+            ))
     
     fig.update_layout(
         title="Energy Production: Real Data vs Predictions (Hindcast)",
@@ -284,11 +294,13 @@ else:
     st.plotly_chart(fig, use_container_width=True)
 
     with st.expander("Preview Raw Data"):
-        if combined_real is not None:
+        if has_pred and has_real:
             combined_with_real = combined_pred.join(combined_real, how="outer")
             st.dataframe(combined_with_real.reset_index().head(200))
-        else:
+        elif has_pred:
             st.dataframe(combined_pred.reset_index().head(200))
+        else:
+            st.dataframe(combined_real.reset_index().head(200))
 
 st.caption(
     f"Showing window: **{start_time.strftime('%Y-%m-%d %H:%M')} → {end_time.strftime('%Y-%m-%d %H:%M')} (UTC)**"
