@@ -31,7 +31,7 @@ gef-train:
 	python scripts/3_training_pipeline.py
 
 gef-inference:
-#	python scripts/2_feature_pipeline.py
+	python scripts/2_feature_pipeline.py
 	python scripts/4_inference_pipeline.py
 
 gef-all: aq-features aq-train aq-inference
