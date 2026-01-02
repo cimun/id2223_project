@@ -33,22 +33,3 @@ jobs:
           HOPSWORKS_API_KEY: ${{ secrets.HOPSWORKS_API_KEY }}
         run: |
           make gef-inference
-      - name: github pages publish
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "New energy forecast published"
-          commit_options: '--no-verify --signoff'
-
-          file_pattern: 'docs/air-quality/assets/img/*'
-
-          repository: .
-
-          status_options: '--untracked-files=no'
-
-          skip_dirty_check: true
-
-          skip_fetch: true
-
-          skip_checkout: true
-
-          push_options: '--force'
