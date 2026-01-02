@@ -5,6 +5,8 @@ import warnings
 from pathlib import Path
 from datetime import datetime
 
+from numpy import double
+
 warnings.filterwarnings("ignore", module="IPython")
 
 # ---------- Paths / PYTHONPATH ----------
@@ -60,7 +62,10 @@ def run_inference_for_sensor(location: dict, energy_source: str, current_time: d
     batch_df["predicted_energy"] = xgb_model.predict(batch_df[WEATHER_FEATURES+["hour", "day_of_week", "month", "day_of_year"]])
 
     # we are using a simple regression model, which can predict negative values, but energy production cannot be negative
-    batch_df["predicted_energy"] = batch_df["predicted_energy"].apply(lambda x: max(x, 0))
+    batch_df["predicted_energy"] = batch_df["predicted_energy"].apply(lambda x: max(x, 0.0))
+
+    # make batch_df["predicted_energy"] type float
+    batch_df["predicted_energy"] = batch_df["predicted_energy"].astype('float32')
 
     batch_df["section"] = section
     batch_df["hours_before_forecast"] = range(1, len(batch_df) + 1)
