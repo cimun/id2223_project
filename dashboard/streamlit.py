@@ -181,3 +181,30 @@ fig.add_trace(go.Scatter(x=r_plot[TIME_COL], y=r_plot[real_col],
 fig.update_layout(title=f"{energy_type} in {st.session_state.selected_area}", 
                   hovermode="x unified", template="plotly_white", height=500)
 st.plotly_chart(fig, use_container_width=True)
+
+
+
+# =====================================================================
+# 6. RAW DATA PREVIEW
+# =====================================================================
+with st.expander("View Detailed Data Log"):
+    # Combine predictions and real data for the table view
+    # We rename columns slightly so it's clear in the table which is which
+    table_p = p_plot[[TIME_COL, PREDICTED_VALUE_COL]].copy().rename(columns={PREDICTED_VALUE_COL: "Forecasted MW"})
+    table_r = r_plot[[TIME_COL, real_col]].copy().rename(columns={real_col: "Actual MW"})
+    
+    # Merge on timestamp to see them side-by-side
+    merged_df = pd.merge(table_p, table_r, on=TIME_COL, how="outer").sort_values(by=TIME_COL, ascending=False)
+    
+    st.write(f"Showing raw data for **{st.session_state.selected_area}** ({energy_type})")
+    st.dataframe(
+        merged_df.style.format({
+            "Forecasted MW": "{:.2f}",
+            "Actual MW": "{:.2f}"
+        }), 
+        use_container_width=True
+    )
+
+st.caption(
+    f"Data window: **{actual_start.strftime('%Y-%m-%d %H:%M')}** to **{actual_end.strftime('%Y-%m-%d %H:%M')}** (UTC)"
+)
