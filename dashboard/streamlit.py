@@ -143,7 +143,10 @@ except Exception as e:
 # --- Synced Time & Date Selectors ---
 st.markdown("---")
 if "actual_range" not in st.session_state:
-    st.session_state.actual_range = (global_min, global_max)
+    # Default to latest 3 days
+    default_end = global_max
+    default_start = default_end - timedelta(days=3)
+    st.session_state.actual_range = (default_start, default_end)
 
 d_col1, d_col2 = st.columns(2)
 with d_col1:
