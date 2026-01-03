@@ -139,47 +139,47 @@ with ctrl_col:
 # 3. ACTION BAR (Mimicking the Site UI)
 # =====================================================================
 # State management for Map-to-Dropdown sync
-"""
-if 'selected_area' not in st.session_state:
-    st.session_state.selected_area = list(AREAS.keys())[0]
 
-# Row: Filter Controls
-col1, col2, col3 = st.columns([2, 2, 1])
-with col1:
-    energy_type = st.selectbox("Production Type", ["Solar", "Wind"])
-with col2:
-    selected_area = st.selectbox("Bidding Zone / Area", list(AREAS.keys()), key="area_select")
-with col3:
-    st.write("") # Spacer
-    st.success(f"Connected: {HOPSWORKS_PROJECT}")
+# if 'selected_area' not in st.session_state:
+#     st.session_state.selected_area = list(AREAS.keys())[0]
 
-# =====================================================================
-# 4. AREA SELECTOR MAP
-# =====================================================================
-map_fig = go.Figure(go.Scattermapbox(
-    lat=[AREAS[a]["lat"] for a in AREAS],
-    lon=[AREAS[a]["lon"] for a in AREAS],
-    mode='markers+text',
-    marker=go.scattermapbox.Marker(size=15, color='#003366'),
-    text=list(AREAS.keys()),
-    hoverinfo='text'
-))
+# # Row: Filter Controls
+# col1, col2, col3 = st.columns([2, 2, 1])
+# with col1:
+#     energy_type = st.selectbox("Production Type", ["Solar", "Wind"])
+# with col2:
+#     selected_area = st.selectbox("Bidding Zone / Area", list(AREAS.keys()), key="area_select")
+# with col3:
+#     st.write("") # Spacer
+#     st.success(f"Connected: {HOPSWORKS_PROJECT}")
 
-map_fig.update_layout(
-    mapbox=dict(style="carto-positron", zoom=4, center={"lat": 58, "lon": 15}),
-    margin={"r":0,"t":0,"l":0,"b":0}, height=250, clickmode='event+select'
-)
+# # =====================================================================
+# # 4. AREA SELECTOR MAP
+# # =====================================================================
+# map_fig = go.Figure(go.Scattermapbox(
+#     lat=[AREAS[a]["lat"] for a in AREAS],
+#     lon=[AREAS[a]["lon"] for a in AREAS],
+#     mode='markers+text',
+#     marker=go.scattermapbox.Marker(size=15, color='#003366'),
+#     text=list(AREAS.keys()),
+#     hoverinfo='text'
+# ))
 
-# Render map and capture interaction
-map_selection = st.plotly_chart(map_fig, use_container_width=True, on_select="rerun")
+# map_fig.update_layout(
+#     mapbox=dict(style="carto-positron", zoom=4, center={"lat": 58, "lon": 15}),
+#     margin={"r":0,"t":0,"l":0,"b":0}, height=250, clickmode='event+select'
+# )
 
-# If map is clicked, update the selectbox area
-if map_selection and map_selection.get("selection", {}).get("points"):
-    new_area = map_selection["selection"]["points"][0]["text"]
-    if new_area != selected_area:
-        st.session_state.area_select = new_area
-        st.rerun()
-"""
+# # Render map and capture interaction
+# map_selection = st.plotly_chart(map_fig, use_container_width=True, on_select="rerun")
+
+# # If map is clicked, update the selectbox area
+# if map_selection and map_selection.get("selection", {}).get("points"):
+#     new_area = map_selection["selection"]["points"][0]["text"]
+#     if new_area != selected_area:
+#         st.session_state.area_select = new_area
+#         st.rerun()
+
 # =====================================================================
 # 5. DATA LOADING & PROCESSING
 # =====================================================================
