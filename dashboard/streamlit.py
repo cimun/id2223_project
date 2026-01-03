@@ -197,29 +197,68 @@ except Exception as e:
     st.stop()
 
 # Time Slider
+# st.markdown("---")
+# time_range = st.slider("Time Range", min_value=global_min, max_value=global_max, 
+#                        value=(global_min, global_max), format="MMM DD, HH:mm")
+
+# # Date Selector Dropdown
+# col1, col2 = st.columns(2)
+# with col1:
+#     start_date = st.date_input("Start Date", value=time_range[0].date())
+# with col2:
+#     end_date = st.date_input("End Date", value=time_range[1].date())
+
+# # Convert date inputs to datetime at midnight
+# from datetime import datetime as dt_class
+# start_datetime = dt_class.combine(start_date, dt_class.min.time()).replace(tzinfo=timezone.utc)
+# end_datetime = dt_class.combine(end_date, dt_class.max.time()).replace(tzinfo=timezone.utc)
+
+# # Use date picker if it differs from slider, otherwise use slider
+# if start_date != time_range[0].date() or end_date != time_range[1].date():
+#     actual_start = start_datetime
+#     actual_end = end_datetime
+# else:
+#     actual_start = time_range[0]
+#     actual_end = time_range[1]
+
+# =====================================================================
+# 5.5 SYNCED TIME & DATE SELECTORS
+# =====================================================================
 st.markdown("---")
-time_range = st.slider("Time Range", min_value=global_min, max_value=global_max, 
-                       value=(global_min, global_max), format="MMM DD, HH:mm")
 
-# Date Selector Dropdown
-col1, col2 = st.columns(2)
-with col1:
-    start_date = st.date_input("Start Date", value=time_range[0].date())
-with col2:
-    end_date = st.date_input("End Date", value=time_range[1].date())
+# Initialize session state for the range if not present
+if "actual_range" not in st.session_state:
+    st.session_state.actual_range = (global_min, global_max)
 
-# Convert date inputs to datetime at midnight
-from datetime import datetime as dt_class
-start_datetime = dt_class.combine(start_date, dt_class.min.time()).replace(tzinfo=None)
-end_datetime = dt_class.combine(end_date, dt_class.max.time()).replace(tzinfo=None)
+# 1. Date Inputs (Top Row)
+d_col1, d_col2 = st.columns(2)
+with d_col1:
+    new_start_date = st.date_input("Start Date", value=st.session_state.actual_range[0].date())
+with d_col2:
+    new_end_date = st.date_input("End Date", value=st.session_state.actual_range[1].date())
 
-# Use date picker if it differs from slider, otherwise use slider
-if start_date != time_range[0].date() or end_date != time_range[1].date():
-    actual_start = start_datetime
-    actual_end = end_datetime
+# 2. Time Slider (Bottom Row)
+new_range = st.slider(
+    "Fine-tune Time",
+    min_value=global_min,
+    max_value=global_max,
+    value=st.session_state.actual_range,
+    format="MMM DD, HH:mm"
+)
+
+# 3. Synchronization Logic
+# If the dates changed via the date_input, update the range
+current_start, current_end = st.session_state.actual_range
+if new_start_date != current_start.date() or new_end_date != current_end.date():
+    start_dt = datetime.combine(new_start_date, time.min).replace(tzinfo=timezone.utc)
+    end_dt = datetime.combine(new_end_date, time.max).replace(tzinfo=timezone.utc)
+    st.session_state.actual_range = (start_dt, end_dt)
+    st.rerun()
 else:
-    actual_start = time_range[0]
-    actual_end = time_range[1]
+    # Otherwise, update from the slider
+    st.session_state.actual_range = new_range
+
+actual_start, actual_end = st.session_state.actual_range
 
 # Filter data
 mask_p = (df_pred[TIME_COL] >= actual_start) & (df_pred[TIME_COL] <= actual_end)
