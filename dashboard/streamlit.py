@@ -86,7 +86,7 @@ with map_col:
     ))
 
     map_fig.update_layout(
-        mapbox=dict(style="carto-positron", zoom=3.8, center={"lat": 61, "lon": 17}),
+        mapbox=dict(style="carto-positron", zoom=2.5, center={"lat": 61, "lon": 17}),
         margin={"r":0,"t":0,"l":0,"b":0}, height=400, clickmode='event+select'
     )
 
