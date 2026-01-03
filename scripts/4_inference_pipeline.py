@@ -120,18 +120,17 @@ def run_inference_for_sensor(location: dict, energy_source: str, current_time: d
 
 
 # ---------- Main ----------
-def main():
+def main(index: int):
     now = datetime.now()
 
-    for location in LOCATIONS:
-        try:
-            run_inference_for_sensor(location, "wind", now)
-            run_inference_for_sensor(location, "solar", now)
-        except Exception as e:
-            print(f"! Error processing {location[0]}: {e}")
-            traceback.print_exception(e)
+    try:
+        run_inference_for_sensor(LOCATIONS[index], "wind", now)
+        run_inference_for_sensor(LOCATIONS[index], "solar", now)
+    except Exception as e:
+        print(f"! Error processing {LOCATIONS[index][0]}: {e}")
+        traceback.print_exception(e)
 
     print("\nAll sections processed.")
 
 if __name__ == "__main__":
-    main()
+    main(int(sys.argv[1]))

@@ -5,8 +5,6 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from entsoe import Area, EntsoePandasClient
-from matplotlib.patches import Patch
-from matplotlib.ticker import MultipleLocator
 import openmeteo_requests
 import requests_cache
 from pandas import Timestamp

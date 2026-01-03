@@ -59,17 +59,16 @@ def process_sensor(location: list, time: datetime) -> None:
     print(f"✓ Completed: {section}")
 
 # ---------- Main ----------
-def main():
+def main(index: int):
     now = datetime.now()
 
-    for location in LOCATIONS:
-        try:
-            process_sensor(location, now)
-        except Exception as e:
-            print(f"! Error processing {location[0]}: {e}")
-            traceback.print_exception(e)
+    try:
+        process_sensor(LOCATIONS[index], now)
+    except Exception as e:
+        print(f"! Error processing {LOCATIONS[index][0]}: {e}")
+        traceback.print_exception(e)
 
     print("\nAll sections processed.")
 
 if __name__ == "__main__":
-    main()
+    main(int(sys.argv[1]))
