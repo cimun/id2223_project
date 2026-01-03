@@ -63,7 +63,7 @@ except Exception as e:
 map_col, ctrl_col = st.columns([2, 1])
 
 with map_col:
-    st.markdown("### 🗺️ Select Region")
+    st.markdown("Select Region")
     
     # Highlight the selected area on the map by changing color
     colors = ['#ff7f0e' if a == st.session_state.selected_area else '#003366' for a in AREAS.keys()]
@@ -93,22 +93,23 @@ with map_col:
             st.rerun()
 
 with ctrl_col:
-    st.markdown("### ⚙️ Filters")
+    st.markdown("Filters")
     energy_type = st.radio("Production Type", ["Solar", "Wind"])
 
-    # SYNC 2: Dropdown <-> State
-    # We use index calculation to ensure the dropdown moves when the map is clicked
     area_list = list(AREAS.keys())
+    
+    # We use 'selected_area' as the source of truth.
+    # We do NOT give the selectbox its own separate key to avoid conflicts.
     current_index = area_list.index(st.session_state.selected_area)
     
     selected_area = st.selectbox(
-        "Bidding Zone", 
+        "Area", 
         area_list, 
         index=current_index,
-        key="dropdown_update"
+        # Removing the 'key' here allows the 'index' to force the text update
     )
 
-    # If user changes dropdown, update the central state
+    # If the user manually changes the dropdown, update the state and rerun
     if selected_area != st.session_state.selected_area:
         st.session_state.selected_area = selected_area
         st.rerun()
