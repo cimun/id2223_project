@@ -3,6 +3,7 @@ import pandas as pd
 from datetime import datetime, timedelta, timezone
 import hopsworks
 import plotly.graph_objects as go
+import time
 
 # =====================================================================
 # 0. CONFIG & MAPPING (Mimicking ENTSO-E Areas)
