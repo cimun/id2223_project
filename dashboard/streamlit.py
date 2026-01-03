@@ -133,12 +133,13 @@ with ctrl_col:
     st.write("---")
     st.caption("Connection Status")
     st.success(f"🟢 **{HOPSWORKS_PROJECT}**")
-    
-"""
+
+
 # =====================================================================
 # 3. ACTION BAR (Mimicking the Site UI)
 # =====================================================================
 # State management for Map-to-Dropdown sync
+"""
 if 'selected_area' not in st.session_state:
     st.session_state.selected_area = list(AREAS.keys())[0]
 
