@@ -68,6 +68,73 @@ except Exception as e:
     st.error(f"Connection Failed: {e}")
     st.stop()
 
+
+# =====================================================================
+# 3 & 4. ACTION BAR & MAP SELECTOR (Side-by-Side)
+# =====================================================================
+
+# Define two columns with the requested 2:1 ratio
+map_col, ctrl_col = st.columns([2, 1])
+
+with map_col:
+    st.markdown("### 🗺️ Select Region")
+    
+    # Create the map figure
+    map_fig = go.Figure(go.Scattermapbox(
+        lat=[AREAS[a]["lat"] for a in AREAS],
+        lon=[AREAS[a]["lon"] for a in AREAS],
+        mode='markers+text',
+        marker=go.scattermapbox.Marker(size=18, color='#003366'),
+        text=list(AREAS.keys()),
+        textposition="top center",
+        hoverinfo='text'
+    ))
+
+    map_fig.update_layout(
+        mapbox=dict(
+            style="carto-positron", 
+            zoom=3.8, 
+            center={"lat": 58, "lon": 15}
+        ),
+        margin={"r":0,"t":0,"l":0,"b":0},
+        height=400,
+        clickmode='event+select'
+    )
+
+    # Render map and capture interaction
+    map_selection = st.plotly_chart(map_fig, use_container_width=True, on_select="rerun")
+
+    # Sync Map Click to Session State
+    if map_selection and map_selection.get("selection", {}).get("points"):
+        new_area = map_selection["selection"]["points"][0]["text"]
+        if new_area != st.session_state.get('selected_area'):
+            st.session_state.selected_area = new_area
+            st.rerun()
+
+with ctrl_col:
+    st.markdown("### ⚙️ Filters")
+    
+    # Selection logic
+    energy_type = st.radio("Production Type", ["Solar", "Wind"], horizontal=False)
+    
+    # Use session_state to keep dropdown synced with map
+    selected_area = st.selectbox(
+        "Bidding Zone", 
+        list(AREAS.keys()), 
+        index=list(AREAS.keys()).index(st.session_state.get('selected_area', "Sweden SE4")),
+        key="area_select_dropdown"
+    )
+    
+    # Update state if dropdown changes
+    if selected_area != st.session_state.get('selected_area'):
+        st.session_state.selected_area = selected_area
+
+    # Add mini metrics for context (Standard ENTSO-E style)
+    st.write("---")
+    st.caption("Connection Status")
+    st.success(f"🟢 **{HOPSWORKS_PROJECT}**")
+    
+"""
 # =====================================================================
 # 3. ACTION BAR (Mimicking the Site UI)
 # =====================================================================
@@ -111,7 +178,7 @@ if map_selection and map_selection.get("selection", {}).get("points"):
     if new_area != selected_area:
         st.session_state.area_select = new_area
         st.rerun()
-
+"""
 # =====================================================================
 # 5. DATA LOADING & PROCESSING
 # =====================================================================
