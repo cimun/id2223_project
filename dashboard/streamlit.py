@@ -39,6 +39,13 @@ if 'selected_area' not in st.session_state:
 # =====================================================================
 st.set_page_config(page_title="Energy Transparency Platform", layout="wide")
 
+st.title("Energy Forecast Dashboard")
+
+st.markdown(
+    """
+    """
+)
+
 @st.cache_resource(show_spinner="Connecting to Hopsworks...")
 def connect_hopsworks():
     project = hopsworks.login(project=HOPSWORKS_PROJECT, api_key_value=HOPSWORKS_API_KEY)
@@ -144,7 +151,7 @@ with d_col1:
 with d_col2:
     new_end_date = st.date_input("End Date", value=st.session_state.actual_range[1].date())
 
-new_range = st.slider("Fine-tune Time", min_value=global_min, max_value=global_max, 
+new_range = st.slider("Time Range", min_value=global_min, max_value=global_max, 
                        value=st.session_state.actual_range, format="MMM DD, HH:mm")
 
 # Logic for Time Sync
