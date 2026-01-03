@@ -1,307 +1,170 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta, timezone
-import os
 import hopsworks
 import plotly.graph_objects as go
 
 # =====================================================================
-# 0. HARD-CODED CONFIG  (EDIT THESE ONLY)
+# 0. CONFIG & MAPPING (Mimicking ENTSO-E Areas)
 # =====================================================================
 
 HOPSWORKS_PROJECT = "chris"
 HOPSWORKS_API_KEY = "uyF3wIn3OVAm1Sne.y9dXwMhnPr9JHLdVpfkfwCEBy8JJjq7c4j9IOsbLcKwBfnDtnxWvb5PNwa5E3cxT"
-
-# List of prediction feature groups to visualize
-PREDICTION_FEATURE_GROUPS = [
-    "solar_energy_predictions_se_4",
-    "wind_energy_predictions_se_4"
-]
-
-# Mapping of prediction feature groups to their corresponding real data
-# Format: prediction_fg_name -> (real_data_fg_name, real_value_column_name)
-PREDICTION_TO_REAL_DATA_MAP = {
-    "solar_energy_predictions_se_4": ("energy_production_se_4", "solar"),
-    "wind_energy_predictions_se_4": ("energy_production_se_4", "wind")
-}
-
 FEATURE_GROUP_VERSION = 1
-
-# Mandatory column names inside each prediction FG
 TIME_COL = "timestamp"
 PREDICTED_VALUE_COL = "predicted_energy"
 
+# Define your areas with their coordinates and naming suffixes
+AREAS = {
+    "Sweden SE4": {"lat": 56.45704350532567, "lon": 14.224629482085703, "suffix": "se_4"},
+    "Sweden SE3": {"lat": 59.44841932603451, "lon": 15.36155412007809, "suffix": "se_3"},
+    "Sweden SE2": {"lat": 63.41704926197734, "lon": 16.087507002857887, "suffix": "se_2"},
+    "Sweden SE1": {"lat": 66.83197545465562, "lon": 21.09658182376257, "suffix": "se_1"},
+
+}
+
+# Mapping logic to match your FG naming: "energy_predictions_area"
+def get_fg_names(area_name, energy_type):
+    suffix = AREAS[area_name]["suffix"]
+    pred_fg = f"{energy_type.lower()}_energy_predictions_{suffix}"
+    # Map to real data FG and the specific column name
+    real_fg = f"energy_production_{suffix}"
+    real_col = energy_type.lower() 
+    return pred_fg, real_fg, real_col
+
 # =====================================================================
-# 1. STREAMLIT PAGE CONFIG
+# 1. PAGE SETUP
 # =====================================================================
+st.set_page_config(page_title="Energy Transparency Platform", layout="wide")
 
-st.set_page_config(
-    page_title="Energy Forecast Dashboard",
-    layout="wide"
-)
+# Custom CSS for ENTSO-E look
+st.markdown("""
+    <style>
+    .main { background-color: #f8f9fa; }
+    .stMetric { background-color: #ffffff; padding: 10px; border-radius: 5px; }
+    </style>
+    """, unsafe_allow_html=True)
 
-st.title("Energy Forecast Dashboard")
-
-st.markdown(
-    """
-    """
-)
+st.title("⚡ Total Generation Forecast - Day Ahead")
 
 # =====================================================================
-# 2. HOPSWORKS CONNECTION (HARDCODED)
+# 2. HOPSWORKS CONNECTORS (UNCHANGED)
 # =====================================================================
-
 @st.cache_resource(show_spinner="Connecting to Hopsworks...")
 def connect_hopsworks():
-    import hopsworks
-    print("Logging in...")
-    project = hopsworks.login(
-        project=HOPSWORKS_PROJECT,
-        api_key_value=HOPSWORKS_API_KEY
-    )
-    print("Getting feature store...")
-    fs = project.get_feature_store()
-    return fs
+    project = hopsworks.login(project=HOPSWORKS_PROJECT, api_key_value=HOPSWORKS_API_KEY)
+    return project.get_feature_store()
+
+@st.cache_data(show_spinner="Syncing data...")
+def load_data(fg_name: str):
+    fg = fs.get_feature_group(fg_name, version=FEATURE_GROUP_VERSION)
+    df = fg.read()
+    df[TIME_COL] = pd.to_datetime(df[TIME_COL])
+    return df.sort_values(by=TIME_COL).drop_duplicates(subset=[TIME_COL], keep='last')
 
 try:
     fs = connect_hopsworks()
-    st.success(f"Connected to Hopsworks project: **{HOPSWORKS_PROJECT}**")
 except Exception as e:
-    st.error(f"❌ Failed to connect to Hopsworks: {e}")
-    st.stop()
-
-
-# =====================================================================
-# 3. READ FEATURE GROUPS
-# =====================================================================
-
-@st.cache_data(show_spinner="Loading feature group...")
-def load_feature_group(fg_name: str, version: int):
-    fg = fs.get_feature_group(fg_name, version=version)
-    df = fg.read()
-    df[TIME_COL] = pd.to_datetime(df[TIME_COL])
-
-    df = df.sort_values(by=[TIME_COL]) # Ensure order
-    df = df.drop_duplicates(subset=[TIME_COL], keep='last')
-
-    return df
-
-
-# =====================================================================
-# 4. UI – SELECT PREDICTION SETS
-# =====================================================================
-
-#st.subheader("Select Predictions")
-
-selected_fgs = st.multiselect(
-    "Sensors",
-    PREDICTION_FEATURE_GROUPS,
-    default=[PREDICTION_FEATURE_GROUPS[0]],
-    help="Overlay multiple prediction datasets on the same plot."
-)
-
-if not selected_fgs:
-    st.warning("Please select at least one feature group.")
+    st.error(f"Connection Failed: {e}")
     st.stop()
 
 # =====================================================================
-# 5. LOAD ALL SELECTED FEATURE GROUPS
+# 3. ACTION BAR (Mimicking the Site UI)
 # =====================================================================
+# State management for Map-to-Dropdown sync
+if 'selected_area' not in st.session_state:
+    st.session_state.selected_area = list(AREAS.keys())[0]
 
-loaded_predictions = {}
-loaded_real_data = {}
-global_min, global_max = None, None
+# Row: Filter Controls
+col1, col2, col3 = st.columns([2, 2, 1])
+with col1:
+    energy_type = st.selectbox("Production Type", ["Solar", "Wind"])
+with col2:
+    selected_area = st.selectbox("Bidding Zone / Area", list(AREAS.keys()), key="area_select")
+with col3:
+    st.write("") # Spacer
+    st.success(f"Connected: {HOPSWORKS_PROJECT}")
 
-for fg_name in selected_fgs:
-    # Load predictions
-    try:
-        df = load_feature_group(fg_name, FEATURE_GROUP_VERSION)
-        loaded_predictions[fg_name] = df
+# =====================================================================
+# 4. AREA SELECTOR MAP
+# =====================================================================
+map_fig = go.Figure(go.Scattermapbox(
+    lat=[AREAS[a]["lat"] for a in AREAS],
+    lon=[AREAS[a]["lon"] for a in AREAS],
+    mode='markers+text',
+    marker=go.scattermapbox.Marker(size=15, color='#003366'),
+    text=list(AREAS.keys()),
+    hoverinfo='text'
+))
 
-        fg_min = df[TIME_COL].min().to_pydatetime()
-        fg_max = df[TIME_COL].max().to_pydatetime()
+map_fig.update_layout(
+    mapbox=dict(style="carto-positron", zoom=4, center={"lat": 58, "lon": 15}),
+    margin={"r":0,"t":0,"l":0,"b":0}, height=250, clickmode='event+select'
+)
+
+# Render map and capture interaction
+map_selection = st.plotly_chart(map_fig, use_container_width=True, on_select="rerun")
+
+# If map is clicked, update the selectbox area
+if map_selection and map_selection.get("selection", {}).get("points"):
+    new_area = map_selection["selection"]["points"][0]["text"]
+    if new_area != selected_area:
+        st.session_state.area_select = new_area
+        st.rerun()
+
+# =====================================================================
+# 5. DATA LOADING & PROCESSING
+# =====================================================================
+pred_fg, real_fg, real_col = get_fg_names(selected_area, energy_type)
+
+try:
+    df_pred = load_data(pred_fg)
+    df_real = load_data(real_fg)
     
-        global_min = fg_min if global_min is None else min(global_min, fg_min)
-        global_max = fg_max if global_max is None else max(global_max, fg_max)
-
-    except Exception as e:
-        st.error(f"Failed to read predictions FG '{fg_name}': {e}")
-    
-    # Load corresponding real data based on prediction feature group name
-    if fg_name in PREDICTION_TO_REAL_DATA_MAP:
-        real_data_fg, real_value_col = PREDICTION_TO_REAL_DATA_MAP[fg_name]
-        try:
-            df_real = load_feature_group(real_data_fg, FEATURE_GROUP_VERSION)
-            loaded_real_data[fg_name] = (df_real, real_value_col)
-
-            fg_min = df_real[TIME_COL].min().to_pydatetime()
-            fg_max = df_real[TIME_COL].max().to_pydatetime()
-        
-            global_min = fg_min if global_min is None else min(global_min, fg_min)
-            global_max = fg_max if global_max is None else max(global_max, fg_max)
-
-        except Exception as e:
-            st.warning(f"Could not load real data FG '{real_data_fg}': {e}")
-
-if not loaded_predictions:
-    st.error("No valid feature groups could be loaded.")
+    # Calculate Global Bounds
+    global_min = min(df_pred[TIME_COL].min(), df_real[TIME_COL].min()).to_pydatetime()
+    global_max = max(df_pred[TIME_COL].max(), df_real[TIME_COL].max()).to_pydatetime()
+except Exception as e:
+    st.error(f"Feature Groups not found for {selected_area} {energy_type}.")
     st.stop()
 
+# Time Slider
+st.markdown("---")
+time_range = st.slider("Time Range", min_value=global_min, max_value=global_max, 
+                       value=(global_min, global_max), format="MMM DD, HH:mm")
+
+# Filter data
+mask_p = (df_pred[TIME_COL] >= time_range[0]) & (df_pred[TIME_COL] <= time_range[1])
+mask_r = (df_real[TIME_COL] >= time_range[0]) & (df_real[TIME_COL] <= time_range[1])
+p_plot = df_pred[mask_p]
+r_plot = df_real[mask_r]
 
 # =====================================================================
-# 6. TIME SLIDER (WITH SAFETY BOUNDS)
+# 6. ENTSO-E STYLE CHART
 # =====================================================================
+fig = go.Figure()
 
-#st.subheader("Time Window")
+# Prediction Trace (Dashed Line)
+fig.add_trace(go.Scatter(
+    x=p_plot[TIME_COL], y=p_plot[PREDICTED_VALUE_COL],
+    name="Day-Ahead Forecast", line=dict(color='#003366', width=2, dash='dash')
+))
 
-# 1. Define the absolute bounds from your data
-#slider_min = datetime(2023, 1, 1, tzinfo=timezone.utc)
-slider_min = global_min
-slider_max = global_max
+# Real Data Trace (Solid Area)
+fig.add_trace(go.Scatter(
+    x=r_plot[TIME_COL], y=r_plot[real_col],
+    name="Actual Generation", fill='tozeroy',
+    line=dict(color='#ff7f0e', width=2)
+))
 
-# 2. Initialize the selection in session_state if it doesn't exist
-if "current_range" not in st.session_state:
-    now = datetime.now(timezone.utc)
-    
-    # SAFETY CHECK: 
-    # If 'now' is already past the end of our data, 
-    # start the slider at the end of the data minus 7 days.
-    if now > slider_max:
-        init_end = slider_max
-        init_start = max(slider_min, slider_max - timedelta(days=7))
-    else:
-        init_start = max(now, slider_min)
-        init_end = min(now + timedelta(days=7), slider_max)
-        
-    st.session_state.current_range = (init_start, init_end)
-
-# 3. Double-check session_state isn't out of bounds (prevents crashes if data changes)
-current_val = list(st.session_state.current_range)
-current_val[0] = max(slider_min, min(current_val[0], slider_max))
-current_val[1] = max(slider_min, min(current_val[1], slider_max))
-st.session_state.current_range = tuple(current_val)
-
-# 4. Create the slider
-time_range = st.slider(
-    "Select time window",
-    min_value=slider_min,
-    max_value=slider_max,
-    key="current_range",
-    format="YYYY-MM-DD HH:mm"
+fig.update_layout(
+    title=f"{energy_type} Generation in {selected_area}",
+    xaxis_title="Time (UTC)", yaxis_title="MW / Energy Units",
+    hovermode="x unified", template="plotly_white", height=500
 )
 
-start_time, end_time = time_range
+st.plotly_chart(fig, use_container_width=True)
 
-# =====================================================================
-# 7. PREPARE PLOT DATA
-# =====================================================================
-
-combined_pred = None
-combined_real = None
-
-# Combine predictions
-for fg_name, df in loaded_predictions.items():
-    mask = (df[TIME_COL] >= start_time) & (df[TIME_COL] <= end_time)
-    tmp = df.loc[mask, [TIME_COL, PREDICTED_VALUE_COL]].copy()
-    tmp = tmp.rename(columns={TIME_COL: "time", PREDICTED_VALUE_COL: fg_name})
-    tmp = tmp.set_index("time").sort_index()
-
-    combined_pred = tmp if combined_pred is None else combined_pred.join(tmp, how="outer")
-
-# Combine real data
-for fg_name, (df, real_value_col) in loaded_real_data.items():
-    mask = (df[TIME_COL] >= start_time) & (df[TIME_COL] <= end_time)
-    tmp = df.loc[mask, [TIME_COL, real_value_col]].copy()
-    tmp = tmp.rename(columns={TIME_COL: "time", real_value_col: fg_name + "_real"})
-    tmp = tmp.set_index("time").sort_index()
-
-    combined_real = tmp if combined_real is None else combined_real.join(tmp, how="outer")
-
-# =====================================================================
-# 8. PLOT
-# =====================================================================
-
-st.subheader("Forecast Visualization")
-
-# Check if we have any data to display
-has_pred = combined_pred is not None and not combined_pred.empty
-has_real = combined_real is not None and not combined_real.empty
-
-if not has_pred and not has_real:
-    st.warning("No data in the selected window.")
-else:
-    # Create Plotly figure with hardcoded colors for wind and solar
-    fig = go.Figure()
-    
-    # Hardcoded color mapping: blue for wind, orange for solar
-    color_map = {
-        "wind_energy_predictions_se_4": "#1f77b4",  # Blue
-        "solar_energy_predictions_se_4": "#ff7f0e"  # Orange
-    }
-    
-    # Get all unique feature groups from either predictions or real data
-    all_cols = set()
-    if has_pred:
-        all_cols.update(combined_pred.columns)
-    if has_real:
-        all_cols.update(col.replace("_real", "") for col in combined_real.columns)
-    
-    # For each sensor, create hindcast visualization
-    for col in sorted(all_cols):
-        # Map feature group name to color
-        color = color_map.get(col, "#7f7f7f")  # Default gray if not found
-        
-        # Get prediction data
-        pred_data = combined_pred[col] if has_pred and col in combined_pred.columns else pd.Series()
-        
-        # Get corresponding real data if available
-        real_col = col + "_real"
-        real_data = combined_real[real_col] if has_real and real_col in combined_real.columns else pd.Series()
-        
-        # Add real data trace (solid line) - hindcast accuracy check
-        if not real_data.empty:
-            fig.add_trace(go.Scatter(
-                x=real_data.index,
-                y=real_data.values,
-                mode='lines',
-                name=col + " (Real)",
-                line=dict(color=color, dash='solid', width=2),
-                legendgroup=col,
-                showlegend=True
-            ))
-        
-        # Add prediction data trace (dashed line)
-        if not pred_data.empty:
-            fig.add_trace(go.Scatter(
-                x=pred_data.index,
-                y=pred_data.values,
-                mode='lines',
-                name=col + " (Prediction)",
-                line=dict(color=color, dash='dash', width=2),
-                legendgroup=col,
-                showlegend=True
-            ))
-    
-    fig.update_layout(
-        title="Energy Production: Real Data vs Predictions (Hindcast)",
-        xaxis_title="Time",
-        yaxis_title="Energy production (Unit)",
-        hovermode='x unified',
-        height=500,
-        template="plotly_white"
-    )
-    
-    st.plotly_chart(fig, use_container_width=True)
-
-    with st.expander("Preview Raw Data"):
-        if has_pred and has_real:
-            combined_with_real = combined_pred.join(combined_real, how="outer")
-            st.dataframe(combined_with_real.reset_index().head(200))
-        elif has_pred:
-            st.dataframe(combined_pred.reset_index().head(200))
-        else:
-            st.dataframe(combined_real.reset_index().head(200))
-
-st.caption(
-    f"Showing window: **{start_time.strftime('%Y-%m-%d %H:%M')} → {end_time.strftime('%Y-%m-%d %H:%M')} (UTC)**"
-)
+# Data Table
+with st.expander("View Detailed Data Log"):
+    st.dataframe(p_plot.tail(20))
