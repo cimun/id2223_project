@@ -201,6 +201,13 @@ st.markdown("---")
 time_range = st.slider("Time Range", min_value=global_min, max_value=global_max, 
                        value=(global_min, global_max), format="MMM DD, HH:mm")
 
+# Date Selector Dropdown
+col1, col2 = st.columns(2)
+with col1:
+    start_date = st.date_input("Start Date", value=time_range[0].date())
+with col2:
+    end_date = st.date_input("End Date", value=time_range[1].date())
+
 # Filter data
 mask_p = (df_pred[TIME_COL] >= time_range[0]) & (df_pred[TIME_COL] <= time_range[1])
 mask_r = (df_real[TIME_COL] >= time_range[0]) & (df_real[TIME_COL] <= time_range[1])
