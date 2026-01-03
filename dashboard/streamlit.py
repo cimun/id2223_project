@@ -208,9 +208,22 @@ with col1:
 with col2:
     end_date = st.date_input("End Date", value=time_range[1].date())
 
+# Convert date inputs to datetime at midnight
+from datetime import datetime as dt_class
+start_datetime = dt_class.combine(start_date, dt_class.min.time()).replace(tzinfo=None)
+end_datetime = dt_class.combine(end_date, dt_class.max.time()).replace(tzinfo=None)
+
+# Use date picker if it differs from slider, otherwise use slider
+if start_date != time_range[0].date() or end_date != time_range[1].date():
+    actual_start = start_datetime
+    actual_end = end_datetime
+else:
+    actual_start = time_range[0]
+    actual_end = time_range[1]
+
 # Filter data
-mask_p = (df_pred[TIME_COL] >= time_range[0]) & (df_pred[TIME_COL] <= time_range[1])
-mask_r = (df_real[TIME_COL] >= time_range[0]) & (df_real[TIME_COL] <= time_range[1])
+mask_p = (df_pred[TIME_COL] >= actual_start) & (df_pred[TIME_COL] <= actual_end)
+mask_r = (df_real[TIME_COL] >= actual_start) & (df_real[TIME_COL] <= actual_end)
 p_plot = df_pred[mask_p]
 r_plot = df_real[mask_r]
 
