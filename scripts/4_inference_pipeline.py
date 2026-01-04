@@ -29,7 +29,7 @@ import pandas as pd
 from xgboost import XGBRegressor
 import hopsworks
 from utils import util
-from data.Constants import LOCATIONS, WEATHER_FEATURES
+from data.Constants import LOCATIONS, WEATHER_FEATURES, PREDICTION_FEATURES
 
 # ---------- Hopsworks login ----------
 project = hopsworks.login(engine="python")
@@ -59,7 +59,7 @@ def run_inference_for_sensor(location: dict, energy_source: str, current_time: d
     batch_df = batch_df.sort_values("timestamp")
 
 
-    batch_df["predicted_energy"] = xgb_model.predict(batch_df[WEATHER_FEATURES+["hour", "day_of_week", "month", "day_of_year"]])
+    batch_df["predicted_energy"] = xgb_model.predict(batch_df[PREDICTION_FEATURES[energy_source]])
 
     # we are using a simple regression model, which can predict negative values, but energy production cannot be negative
     batch_df["predicted_energy"] = batch_df["predicted_energy"].apply(lambda x: max(x, 0.0))
@@ -71,13 +71,6 @@ def run_inference_for_sensor(location: dict, energy_source: str, current_time: d
     batch_df["hours_before_forecast"] = range(1, len(batch_df) + 1)
     batch_df = batch_df.sort_values(by=["timestamp"])
 
-    # ----- Save prediction chart -----
-    docs_dir = root_dir / "docs" / "energy_forecast" / "assets" / "img"
-    docs_dir.mkdir(parents=True, exist_ok=True)
-    pred_path = docs_dir / f"{energy_source}_forecast_{section}.png"
-    plt = util.plot_energy_forecast(section, energy_source, batch_df, str(pred_path))
-    plt.close()
-
     # ----- Monitoring feature group -----
     monitor_fg = fs.get_or_create_feature_group(
         name=f"{energy_source}_energy_predictions_{section.lower()}",
@@ -87,37 +80,6 @@ def run_inference_for_sensor(location: dict, energy_source: str, current_time: d
         event_time="timestamp",
     )
     monitor_fg.insert(batch_df, wait=True)
-
-    # ----- Hindcast -----
-    energy_fg = fs.get_feature_group(name=f"energy_production_{section.lower()}", version=1)
-    energy_df = energy_fg.read()
-    outcome_df = energy_df[["timestamp", energy_source]]
-    preds_df = monitor_fg.filter(monitor_fg.hours_before_forecast == 1).read()[
-        ["timestamp", "predicted_energy"]
-    ]
-
-    hindcast_df = pd.merge(preds_df, outcome_df, on="timestamp", how="inner")
-    hindcast_df = hindcast_df.sort_values(by=["timestamp"])
-    if len(hindcast_df) == 0:
-        hindcast_df = util.backfill_predictions_for_monitoring(
-            weather_fg, energy_df, monitor_fg, xgb_model, energy_source
-        )
-
-    hindcast_path = docs_dir / f"{energy_source}_hindcast_{section}.png"
-    plt = util.plot_energy_forecast(section, energy_source, hindcast_df, str(hindcast_path), hindcast=True)
-    plt.close()
-
-    # ----- Upload to Hopsworks -----
-    dataset_api = project.get_dataset_api()
-    today_str = current_time.strftime("%Y-%m-%d")
-    hops_path = f"Resources/{energy_source}/{section}_{today_str}"
-    if not dataset_api.exists(f"Resources/{energy_source}"):
-        dataset_api.mkdir(f"Resources/{energy_source}")
-    dataset_api.upload(str(pred_path), hops_path, overwrite=True)
-    dataset_api.upload(str(hindcast_path), hops_path, overwrite=True)
-
-    print(f"✓ Uploaded forecast and hindcast PNGs for {section} / {energy_source}")
-
 
 # ---------- Main ----------
 def main(index: int):

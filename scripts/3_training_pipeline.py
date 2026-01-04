@@ -28,7 +28,7 @@ from xgboost import XGBRegressor, plot_importance
 from sklearn.metrics import mean_squared_error, r2_score
 import hopsworks
 from utils import util
-from data.Constants import LOCATIONS
+from data.Constants import LOCATIONS, PREDICTION_FEATURES
 
 # ---------- Hopsworks login ----------
 if settings.HOPSWORKS_API_KEY is not None:
@@ -44,7 +44,7 @@ def train_energy_prediction_model(location: dict, energy_source: str) -> None:
     energy_fg = fs.get_feature_group(name=f"energy_production_{section.lower()}", version=1)
     weather_fg = fs.get_feature_group(name=f"weather_{section.lower()}", version=1)
 
-    selected = energy_fg.select(["timestamp", energy_source]).join(weather_fg.select_features(), on=["section"])
+    selected = energy_fg.select(["timestamp", energy_source]).join(weather_fg.select(PREDICTION_FEATURES[energy_source]), on=["section"])
     fv = fs.get_or_create_feature_view(
         name=f"{energy_source}_energy_production_fv_{section.lower()}",
         description=f"Features for prediction {energy_source} energy in {section}",
