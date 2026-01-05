@@ -185,7 +185,7 @@ fig.add_trace(go.Scatter(x=r_plot[TIME_COL], y=r_plot[real_col],
 max_pred = p_plot[PREDICTED_VALUE_COL].max() if not p_plot.empty else 0
 max_real = r_plot[real_col].max() if not r_plot.empty else 0
 max_value = max(max_pred, max_real)
-y_axis_max = max(10, max_value * 1.1)  # Minimum 10, with 10% padding
+y_axis_max = max(1, max_value * 1.1)  # Minimum 10, with 10% padding
 
 fig.update_layout(title=f"{energy_type} in {st.session_state.selected_area}", 
                   hovermode="x unified", template="plotly_white", height=500,
