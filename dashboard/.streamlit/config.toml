@@ -1,0 +1,6 @@
+[theme]
+primaryColor = "#cb9829ff"                # Color for buttons, sliders, and links
+backgroundColor = "#eaeaeaff"             # Main background color
+secondaryBackgroundColor = "#a4a4a4ff"    # Sidebar and widget backgrounds
+textColor = "#171717ff"                   # Text color
+font = "sans serif"                       # Options: "sans serif", "serif", or "monospace"
