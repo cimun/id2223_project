@@ -181,8 +181,15 @@ fig.add_trace(go.Scatter(x=p_plot[TIME_COL], y=p_plot[PREDICTED_VALUE_COL],
 fig.add_trace(go.Scatter(x=r_plot[TIME_COL], y=r_plot[real_col], 
                          name="Actual", fill='tozeroy', line=dict(color='#ff7f0e', width=2)))
 
+# Calculate max value from plot data for dynamic y-axis scaling
+max_pred = p_plot[PREDICTED_VALUE_COL].max() if not p_plot.empty else 0
+max_real = r_plot[real_col].max() if not r_plot.empty else 0
+max_value = max(max_pred, max_real)
+y_axis_max = max(10, max_value * 1.1)  # Minimum 10, with 10% padding
+
 fig.update_layout(title=f"{energy_type} in {st.session_state.selected_area}", 
-                  hovermode="x unified", template="plotly_white", height=500)
+                  hovermode="x unified", template="plotly_white", height=500,
+                  yaxis=dict(range=[0, y_axis_max]))
 st.plotly_chart(fig, use_container_width=True)
 
 
