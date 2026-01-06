@@ -51,7 +51,7 @@ def connect_hopsworks():
     project = hopsworks.login(project=HOPSWORKS_PROJECT, api_key_value=HOPSWORKS_API_KEY)
     return project.get_feature_store()
 
-@st.cache_data(show_spinner="Syncing data...")
+@st.cache_data(ttl=3600, show_spinner="Syncing data...")
 def load_data(fg_name: str):
     fg = fs.get_feature_group(fg_name, version=FEATURE_GROUP_VERSION)
     df = fg.read()
