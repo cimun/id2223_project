@@ -121,6 +121,10 @@ with ctrl_col:
         st.session_state.selected_area = selected_area
         st.rerun()
 
+    if st.button("Refresh Data", use_container_width=True):
+        st.cache_data.clear()  # This clears ALL @st.cache_data functions
+        st.rerun()
+
     st.write("---")
     st.success(f"🟢 Connected: {HOPSWORKS_PROJECT}")
 
