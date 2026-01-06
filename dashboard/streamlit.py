@@ -129,12 +129,11 @@ with ctrl_col:
     st.success(f"🟢 Connected: {HOPSWORKS_PROJECT}")
 
 # =====================================================================
-# 4. DATA LOADING & FILTERING
+# 4. DATA LOADING & FILTERING (STABLE + UTC + DATE SELECTORS)
 # =====================================================================
-
 pred_fg, real_fg, real_col = get_fg_names(st.session_state.selected_area, energy_type)
 
-# Create a unique key for the current data selection
+# Create a unique key for the current data selection to detect changes
 current_fg_key = f"{pred_fg}_{real_fg}"
 
 # If the data source changed, clear the time range state to prevent slider out-of-bounds errors
@@ -147,46 +146,56 @@ try:
     df_pred = load_data(pred_fg)
     df_real = load_data(real_fg)
     
-    # Force UTC and floor to Hour
+    # Force UTC Awareness and floor to Hour for alignment
     df_pred[TIME_COL] = pd.to_datetime(df_pred[TIME_COL], utc=True).dt.floor('H')
     df_real[TIME_COL] = pd.to_datetime(df_real[TIME_COL], utc=True).dt.floor('H')
     
-    # Calculate fresh bounds for this specific FG
-    global_min = min(df_pred[TIME_COL].min(), df_real[TIME_COL].min()).to_pydatetime()
-    global_max = max(df_pred[TIME_COL].max(), df_real[TIME_COL].max()).to_pydatetime()
+    # Calculate Global Bounds with explicit UTC markers
+    global_min = min(df_pred[TIME_COL].min(), df_real[TIME_COL].min()).to_pydatetime().replace(tzinfo=timezone.utc)
+    global_max = max(df_pred[TIME_COL].max(), df_real[TIME_COL].max()).to_pydatetime().replace(tzinfo=timezone.utc)
     
-    # Ensure global_min and global_max are definitely UTC aware
-    global_min = global_min.replace(tzinfo=timezone.utc)
-    global_max = global_max.replace(tzinfo=timezone.utc)
-
 except Exception as e:
     st.error(f"Data missing for {st.session_state.selected_area}")
     st.stop()
 
-# Initialize or validate actual_range
+# Initialize session state for the range if missing
 if "actual_range" not in st.session_state:
-    # Default: latest 24h of history + full future forecast
-    default_start = (datetime.now(timezone.utc) - timedelta(days=1)).replace(minute=0, second=0, microsecond=0)
+    # Default: Show 48h of history + the 24h forecast
+    default_start = (datetime.now(timezone.utc) - timedelta(days=2)).replace(minute=0, second=0, microsecond=0)
     st.session_state.actual_range = (max(global_min, default_start), global_max)
 
-# Ensure current session state range is within the new global bounds
-# This prevents the slider from crashing if the new FG has a shorter history
-curr_start, curr_end = st.session_state.actual_range
-if curr_start < global_min or curr_end > global_max:
-    st.session_state.actual_range = (global_min, global_max)
+# --- THE DATE SELECTOR BUTTONS ---
+st.markdown("---")
+d_col1, d_col2 = st.columns(2)
+with d_col1:
+    new_start_date = st.date_input("Start Date", value=st.session_state.actual_range[0].date())
+with d_col2:
+    new_end_date = st.date_input("End Date", value=st.session_state.actual_range[1].date())
 
-# --- Render Slider ---
+# --- THE SLIDER ---
 new_range = st.slider(
-    "Time Range", 
-    min_value=global_min, 
-    max_value=global_max, 
-    value=st.session_state.actual_range, 
+    "Time Range",
+    min_value=global_min,
+    max_value=global_max,
+    value=st.session_state.actual_range,
     format="MMM DD, HH:mm"
 )
-st.session_state.actual_range = new_range
+
+# --- SYNC LOGIC: Date Buttons vs Slider ---
+# If the date buttons changed, update the session state range
+current_s, current_e = st.session_state.actual_range
+if new_start_date != current_s.date() or new_end_date != current_e.date():
+    actual_start = datetime.combine(new_start_date, time.min).replace(tzinfo=timezone.utc)
+    actual_end = datetime.combine(new_end_date, time.max).replace(tzinfo=timezone.utc)
+    st.session_state.actual_range = (actual_start, actual_end)
+    st.rerun()
+else:
+    # Otherwise, update from the slider
+    st.session_state.actual_range = new_range
+
 actual_start, actual_end = st.session_state.actual_range
 
-# Filter and Plot (Both sides of the >= are now guaranteed UTC aware)
+# --- FILTER DATA ---
 p_plot = df_pred[(df_pred[TIME_COL] >= actual_start) & (df_pred[TIME_COL] <= actual_end)]
 r_plot = df_real[(df_real[TIME_COL] >= actual_start) & (df_real[TIME_COL] <= actual_end)]
 
