@@ -129,58 +129,61 @@ with ctrl_col:
     st.success(f"🟢 Connected: {HOPSWORKS_PROJECT}")
 
 # =====================================================================
-# 4. DATA LOADING & FILTERING (UTC ENFORCED)
+# 4. DATA LOADING & FILTERING
 # =====================================================================
 
-
 pred_fg, real_fg, real_col = get_fg_names(st.session_state.selected_area, energy_type)
+
+# Create a unique key for the current data selection
+current_fg_key = f"{pred_fg}_{real_fg}"
+
+# If the data source changed, clear the time range state to prevent slider out-of-bounds errors
+if "last_fg_key" in st.session_state and st.session_state.last_fg_key != current_fg_key:
+    if "actual_range" in st.session_state:
+        del st.session_state.actual_range
+st.session_state.last_fg_key = current_fg_key
 
 try:
     df_pred = load_data(pred_fg)
     df_real = load_data(real_fg)
     
-    # Force UTC Awareness and round to Hour to ensure alignment
+    # Force UTC and floor to Hour
     df_pred[TIME_COL] = pd.to_datetime(df_pred[TIME_COL], utc=True).dt.floor('H')
     df_real[TIME_COL] = pd.to_datetime(df_real[TIME_COL], utc=True).dt.floor('H')
     
-    # Calculate Global Bounds
+    # Calculate fresh bounds for this specific FG
     global_min = min(df_pred[TIME_COL].min(), df_real[TIME_COL].min()).to_pydatetime()
     global_max = max(df_pred[TIME_COL].max(), df_real[TIME_COL].max()).to_pydatetime()
     
+    # Ensure global_min and global_max are definitely UTC aware
+    global_min = global_min.replace(tzinfo=timezone.utc)
+    global_max = global_max.replace(tzinfo=timezone.utc)
+
 except Exception as e:
     st.error(f"Data missing for {st.session_state.selected_area}")
     st.stop()
 
-# --- Synced Time & Date Selectors ---
-st.markdown("---")
+# Initialize or validate actual_range
 if "actual_range" not in st.session_state:
-    # Default view: show last 2 days plus the 24h future forecast
-    default_end = global_max
-    default_start = datetime.now(timezone.utc) - timedelta(days=2)
-    st.session_state.actual_range = (default_start, default_end)
+    # Default: latest 24h of history + full future forecast
+    default_start = (datetime.now(timezone.utc) - timedelta(days=1)).replace(minute=0, second=0, microsecond=0)
+    st.session_state.actual_range = (max(global_min, default_start), global_max)
 
-d_col1, d_col2 = st.columns(2)
-with d_col1:
-    new_start_date = st.date_input("Start Date", value=st.session_state.actual_range[0].date())
-with d_col2:
-    new_end_date = st.date_input("End Date", value=st.session_state.actual_range[1].date())
+# Ensure current session state range is within the new global bounds
+# This prevents the slider from crashing if the new FG has a shorter history
+curr_start, curr_end = st.session_state.actual_range
+if curr_start < global_min or curr_end > global_max:
+    st.session_state.actual_range = (global_min, global_max)
 
-new_range = st.slider("Time Range", min_value=global_min, max_value=global_max, 
-                       value=st.session_state.actual_range, format="MMM DD, HH:mm")
-
-# --- Logic for Time Sync (Force UTC Awareness on filter boundaries) ---
-if new_start_date != st.session_state.actual_range[0].date() or new_end_date != st.session_state.actual_range[1].date():
-    start_dt = datetime.combine(new_start_date, time.min).replace(tzinfo=timezone.utc)
-    end_dt = datetime.combine(new_end_date, time.max).replace(tzinfo=timezone.utc)
-    st.session_state.actual_range = (start_dt, end_dt)
-    st.rerun()
-else:
-    # Ensure slider output is also UTC aware
-    st.session_state.actual_range = (
-        pd.to_datetime(new_range[0], utc=True), 
-        pd.to_datetime(new_range[1], utc=True)
-    )
-
+# --- Render Slider ---
+new_range = st.slider(
+    "Time Range", 
+    min_value=global_min, 
+    max_value=global_max, 
+    value=st.session_state.actual_range, 
+    format="MMM DD, HH:mm"
+)
+st.session_state.actual_range = new_range
 actual_start, actual_end = st.session_state.actual_range
 
 # Filter and Plot (Both sides of the >= are now guaranteed UTC aware)
