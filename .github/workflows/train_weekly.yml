@@ -30,4 +30,4 @@ jobs:
         env:
           HOPSWORKS_API_KEY: ${{ secrets.HOPSWORKS_API_KEY }}
         run: |
-          python -u scripts/3_training_pipeline.py
+          make gef-train
